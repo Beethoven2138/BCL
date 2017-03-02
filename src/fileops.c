@@ -1,32 +1,30 @@
-#include <fileops.h>
+#include <fileops.h> 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-FILE* create_file_buffer(char *file_name)
+char* create_file_buffer(char *file_name)
 {
 	printf("In create_file_buffer\n");
 	FILE *fp;
 	fp = fopen(file_name, "r");
-
 	if(fp != 0)
 	{
 		char* file_buffer_name = (char*)malloc(strlen(file_name)*sizeof(char) + 2*sizeof(char));
-		
 	        strcpy(file_buffer_name, file_name);
-		printf("%s", file_buffer_name);
+		
 	        strcat(file_buffer_name, "~");
-		printf("%s", file_buffer_name);
 		
 		FILE *file_buffer = fopen(file_buffer_name, "w+");
 		fclose(fp);
+		fclose(file_buffer);
 		free(file_buffer_name);
-		return file_buffer;
+		return file_buffer_name;
 	}
 
-	else
-		return 0;
+	printf("ERROR!\n");
+	return 0;
 }
 
 int copy_file(char *src_file_name, char *dest_file_name)
@@ -54,6 +52,30 @@ int copy_file(char *src_file_name, char *dest_file_name)
 
 	fclose(src);
 	fclose(dest);
+
+	return 1;
+}
+
+int buffer_to_file(char *file_name, char *permissions, struct text_buffer *buffer)
+{
+	if (permissions != "w" && permissions != "w+")
+		return 0;
+	
+	FILE *fp = fopen(file_name, permissions);
+
+	if (fp == 0)
+		return 0;
+
+	struct buffer_node *node = buffer->head;
+	
+	for (node; node->next != 0; node = node->next)
+	{
+		for (int i = 0; i < BUFFER_NODE_LENGTH; i++)
+		{
+			fputc(node->text[i], fp);
+		}
+	}
+	fclose(fp);
 
 	return 1;
 }

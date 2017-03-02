@@ -16,20 +16,30 @@
 
 #include <fileops.h>
 #include <textcolor.h>
+#include <buffer.h>
+
+#define FILENAME "/home/ssupple/Programming/text_editor/text_editor.txt"
+#define FILEBUFFERNAME "/home/ssupple/Programming/text_editor/text_editor.txt~"
 
 int main(int argc, char *argv[])
 {
-	system ("/bin/stty raw");
+	//system ("/bin/stty raw");
 	
-	FILE *fp = create_file_buffer("/home/saxon/Programming/userspace/text_editor/text_editor.txt");
-	fclose(fp);
+	char* file_name = create_file_buffer("/home/ssupple/Programming/text_editor/text_editor.txt");
 
-	int ret = copy_file("/home/saxon/Programming/userspace/text_editor/text_editor.txt", "/home/saxon/Programming/userspace/text_editor/text_editor.txt~");
+	struct text_buffer buffer;
 
-	printf("%d\n", ret);
+	struct buffer_node start_node = {.length = BUFFER_NODE_LENGTH};
 	
+	file_to_buffer(FILENAME, &buffer, &start_node);
 
-	system ("/bin/stty cooked");
+	printf("%s", start_node.text);
+	
+	buffer_to_file(FILEBUFFERNAME, "w+", &buffer);
+	
+	int ret = copy_file(FILENAME, FILEBUFFERNAME);
+
+	//system ("/bin/stty cooked");
 	
         //textcolor(BRIGHT, RED, BLACK);
 	//printf("In color\n");

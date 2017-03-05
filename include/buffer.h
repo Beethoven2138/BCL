@@ -20,4 +20,8 @@ typedef struct text_buffer
 
 int file_to_buffer(char *file_name, struct text_buffer *buffer, struct buffer_node *node);
 
+int append_char_to_buffer(char c, struct text_buffer *buffer);
+
+void free_buffer(struct text_buffer *buffer);
+
 #endif

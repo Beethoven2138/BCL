@@ -14,4 +14,4 @@ If you want to help, email me at saxon.supple@gmail.com
 
 
 NOTE:
-The program recieves segmentation faults when compiled with -O3. This will be fixed by making the linked list volatile.
+The program recieves segmentation faults when compiled with -O3. This will be fixed by making the linked lists volatile.

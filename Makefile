@@ -1,4 +1,4 @@
-GCCPARAMS = -O3 -Iinclude
+GCCPARAMS = -g -Iinclude
 
 OBJECTS=obj/main.o \
 	obj/fileops.o \

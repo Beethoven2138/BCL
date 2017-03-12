@@ -2,7 +2,7 @@ GCCPARAMS = -g -Iinclude -O3
 
 OBJECTS=obj/main.o \
 	obj/fileops.o \
-	obj/textcolor.o \
+	obj/ansi.o \
 	obj/buffer.o \
 
 

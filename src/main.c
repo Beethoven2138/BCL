@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 
         file_to_buffer(FILENAME, &buffer);
 
-        buffer_to_file(FILEBUFFERNAME, "W+", &buffer);
+        buffer_to_file(FILEBUFFERNAME, &buffer);
 
         free_buffer(&buffer);
 

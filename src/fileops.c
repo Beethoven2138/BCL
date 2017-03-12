@@ -38,7 +38,8 @@ int copy_file(char *src_file_name, char *dest_file_name)
 
 	int c;
 
-	while (1){
+	while (1)
+	{
 		c = fgetc(src);
 
 		if(feof(src))

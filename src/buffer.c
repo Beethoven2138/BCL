@@ -55,6 +55,47 @@ exit:
 
 void add_char_to_line(struct buffer_node *line, char value, int position)
 {
+	struct character *letter = line->head;
+
+	struct character *tmp = (character*)malloc(sizeof(character));
+
+	//Start of line
+	if (position == 0)
+	{
+	        tmp->next = letter;
+		line->head = tmp;
+		tmp->value = value;
+		goto exit;
+	}
+
+	for (unsigned int count = 1; count <= position; count++)
+	{
+		//Append at end of the line
+		if (letter->next == 0)
+		{
+			letter->next = (character*)malloc(sizeof(character));
+			letter->next->value = value;
+			goto exit;
+		}
+
+		if (count == position)
+		{
+			tmp->next = letter->next;
+			letter->next = tmp;
+			tmp->next->value = value;
+			goto exit;
+		}
+
+		letter = letter->next;
+	}
+
+exit:
+	line->length++;
+}
+
+
+/*void add_char_to_line(struct buffer_node *line, char value, int position)
+{
 	printf ("%c", value);
 	
 	unsigned int count = 0;
@@ -68,6 +109,13 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 		node = line->head;
 	}
 
+	if (position == 0)
+	{
+		node->value = value;
+		line->length++;
+		return;
+	}
+	
 	for (node; node != 0; node = node->next)
 	{
 		//If the character is to be placed at the end of the line
@@ -89,13 +137,12 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 			node->next->value = value;
 
 			break;
-		}
-		
+		}	
 		count++;
 	}
 	
 	line->length++;
-}
+}*/
 
 void free_buffer(struct text_buffer *buffer)
 {
@@ -161,4 +208,5 @@ void get_line(struct buffer_node *node, char *contents, unsigned int length)
 
 		letter = letter->next;
 	}
+	contents[length] = 0;
 }

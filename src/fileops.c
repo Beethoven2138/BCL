@@ -59,7 +59,7 @@ int copy_file(char *src_file_name, char *dest_file_name)
 int buffer_to_file(char *file_name, char *permissions, struct text_buffer *buffer)
 {
 	
-	FILE *fp = fopen(file_name, "W+");
+	FILE *fp = fopen(file_name, "w+");
 
 	if (fp == 0)
 		return 0;
@@ -68,8 +68,9 @@ int buffer_to_file(char *file_name, char *permissions, struct text_buffer *buffe
 	
 	for (node; node->next != 0; node = node->next)
 	{
-		char *line = (char*)malloc(sizeof(char) * node->length);
+		char *line = (char*)malloc(sizeof(char) * (node->length+1));
 		get_line(node, line, node->length);
+		printf("%s", line);
 		fprintf(fp, line);
 		fputc(10, fp);
 		free(line);

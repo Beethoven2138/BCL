@@ -6,15 +6,15 @@
 
 char* create_file_buffer(char *file_name)
 {
-	FILE *fp;
-	fp = fopen(file_name, "r");
+	printf("In create_file_buffer\n");
+	FILE *fp = fopen(file_name, "r");
 	if(fp != 0)
 	{
 		char* file_buffer_name = (char*)malloc(strlen(file_name)*sizeof(char) + 2*sizeof(char));
 	        strcpy(file_buffer_name, file_name);
-
+		
 	        strcat(file_buffer_name, "~");
-
+		
 		FILE *file_buffer = fopen(file_buffer_name, "w+");
 		fclose(fp);
 		fclose(file_buffer);
@@ -67,12 +67,13 @@ int buffer_to_file(char *file_name, char *permissions, struct text_buffer *buffe
 
 	struct buffer_node *node = buffer->head;
 	
-	for (node; node != 0; node = node->next)
+	for (node; node->next != 0; node = node->next)
 	{
-		for (int i = 0; i < BUFFER_NODE_LENGTH-1; i++)
-		{
-			fputc(node->text[i], fp);
-		}
+		char *line = (char*)malloc(sizeof(char) * node->length);
+		get_line(node, line, node->length);
+		fprintf(fp, line);
+		fputc(10, fp);
+		free(line);
 	}
 	fclose(fp);
 

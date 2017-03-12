@@ -56,7 +56,7 @@ int copy_file(char *src_file_name, char *dest_file_name)
 	return 1;
 }
 
-int buffer_to_file(char *file_name, char *permissions, struct text_buffer *buffer)
+int buffer_to_file(char *file_name, struct text_buffer *buffer)
 {
 	
 	FILE *fp = fopen(file_name, "w+");

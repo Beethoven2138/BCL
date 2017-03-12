@@ -11,3 +11,7 @@ A linked list will be used to hold the buffer that gets dynamically modified. Wh
 The text file will be broken into separate nodes. This will allow for the file to be dynamically altered in size and for faster searching through different lines and words.
 
 If you want to help, email me at saxon.supple@gmail.com
+
+
+NOTE:
+The program recieves segmentation faults when compiled with -O3. This will be fixed by making the linked list volatile.

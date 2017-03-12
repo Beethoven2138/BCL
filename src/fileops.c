@@ -58,10 +58,8 @@ int copy_file(char *src_file_name, char *dest_file_name)
 
 int buffer_to_file(char *file_name, char *permissions, struct text_buffer *buffer)
 {
-	if (permissions != "w" && permissions != "w+")
-		return 0;
 	
-	FILE *fp = fopen(file_name, permissions);
+	FILE *fp = fopen(file_name, "W+");
 
 	if (fp == 0)
 		return 0;

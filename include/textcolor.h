@@ -1,5 +1,5 @@
-#ifndef TEXTCOLOR_H
-#define TEXTCOLOR_H
+#ifndef ANSI_H
+#define ANSI_H
 
 #define RESET		0
 #define BRIGHT 		1
@@ -19,5 +19,14 @@
 #define	WHITE		7
 
 void textcolor(int attr, int fg, int bg);
+
+void cursor_up(char lines);
+void cursor_down(char lines);
+void cursor_richt(char spaces);
+void cursor_left(char spaces);
+
+void clear();
+void clear_line();
+
 
 #endif

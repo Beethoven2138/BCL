@@ -15,7 +15,7 @@
 #include <stdlib.h>
 
 #include <fileops.h>
-#include <textcolor.h>
+#include <ansi.h>
 #include <buffer.h>
 
 #define FILENAME "/home/ssupple/Programming/text_editor/text_editor.txt"

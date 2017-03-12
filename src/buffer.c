@@ -154,12 +154,11 @@ void get_line(struct buffer_node *node, char *contents, unsigned int length)
 	struct character *letter;
 
 	letter = node->head;
-	
-	unsigned int count = 0;
-	
-	for (letter; letter != 0; letter = letter->next)
+
+	for (int i = 0; i < length; i++)
 	{
-		contents[count] = letter->value;
-		count++;
+		contents[i] = letter->value;
+
+		letter = letter->next;
 	}
 }

@@ -23,27 +23,25 @@
 
 int main(int argc, char *argv[])
 {
-	//system ("/bin/stty raw");
-	
-	char* file_name = create_file_buffer("/home/ssupple/Programming/text_editor/text_editor.txt");
+        //system ("/bin/stty raw");
 
-	struct text_buffer buffer;
+        char* file_name = create_file_buffer("/home/ssupple/Programming/text_editor/text_editor.txt");
 
-	struct buffer_node start_node = {.length = BUFFER_NODE_LENGTH};
-	
-	file_to_buffer(FILENAME, &buffer, &start_node);
+        struct text_buffer buffer;
 
-	printf("%s", start_node.text);
-	
-	buffer_to_file(FILEBUFFERNAME, "w+", &buffer);
-	
-	int ret = copy_file(FILENAME, FILEBUFFERNAME);
+        file_to_buffer(FILENAME, &buffer);
 
-	//system ("/bin/stty cooked");
-	
+        buffer_to_file(FILEBUFFERNAME, "W+", &buffer);
+
+        free_buffer(&buffer);
+
+        //int ret = copy_file(FILENAME, FILEBUFFERNAME);
+
+        //system ("/bin/stty cooked");
+
         //textcolor(BRIGHT, RED, BLACK);
-	//printf("In color\n");
-	//textcolor(RESET, WHITE, BLACK);
-	
-	return 0;
+        //printf("In color\n");
+        //textcolor(RESET, WHITE, BLACK);
+
+        return 0;
 }

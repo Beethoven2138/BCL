@@ -6,7 +6,6 @@
 
 char* create_file_buffer(char *file_name)
 {
-	printf("In create_file_buffer\n");
 	FILE *fp = fopen(file_name, "r");
 	if(fp != 0)
 	{
@@ -22,7 +21,6 @@ char* create_file_buffer(char *file_name)
 		return file_buffer_name;
 	}
 
-	printf("ERROR!\n");
 	return 0;
 }
 
@@ -56,7 +54,7 @@ int copy_file(char *src_file_name, char *dest_file_name)
 	return 1;
 }
 
-int buffer_to_file(char *file_name, char *permissions, struct text_buffer *buffer)
+int buffer_to_file(char *file_name, struct text_buffer *buffer)
 {
 	
 	FILE *fp = fopen(file_name, "w+");
@@ -70,7 +68,6 @@ int buffer_to_file(char *file_name, char *permissions, struct text_buffer *buffe
 	{
 		char *line = (char*)malloc(sizeof(char) * (node->length+1));
 		get_line(node, line, node->length);
-		printf("%s", line);
 		fprintf(fp, "%s", line);
 		fputc(10, fp);
 		free(line);
@@ -78,4 +75,15 @@ int buffer_to_file(char *file_name, char *permissions, struct text_buffer *buffe
 	fclose(fp);
 
 	return 1;
+}
+
+void* auto_save(void *file_buffer_name)
+{
+	while (1)
+	{
+		buffer_to_file(file_buffer_name, &buffer);
+		sleep (5);
+	}
+	
+	return 0;
 }

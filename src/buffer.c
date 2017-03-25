@@ -1,7 +1,9 @@
 #include <buffer.h>
+#include <ansi.h>
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 
 int file_to_buffer(char *file_name, struct text_buffer *buffer)
 {
@@ -39,6 +41,8 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 			//Create a new line
 			node->next = (buffer_node*)malloc(sizeof(buffer_node));
 			node = node->next;
+			node->next = 0;
+			node->head = 0;
 
 			buffer->tail = node;
 			buffer->node_count++;
@@ -50,15 +54,23 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 
 exit:
 	fclose(fp);
+	node->next = 0;
 	return 1;
 }
 
 void add_char_to_line(struct buffer_node *line, char value, int position)
 {
+	if (line->head == 0)
+	{
+		line->head = (character*)malloc(sizeof(character));
+		line->head->next = 0;
+		line->head->value = 0;
+	}
+	
 	struct character *letter = line->head;
-
+	
 	struct character *tmp = (character*)malloc(sizeof(character));
-
+	
 	//Start of line
 	if (position == 0)
 	{
@@ -75,6 +87,7 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 		{
 			letter->next = (character*)malloc(sizeof(character));
 			letter->next->value = value;
+			letter->next->next = 0;
 			goto exit;
 		}
 
@@ -82,7 +95,7 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 		{
 			tmp->next = letter->next;
 			letter->next = tmp;
-			tmp->next->value = value;
+			tmp->value = value;
 			goto exit;
 		}
 
@@ -92,57 +105,6 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 exit:
 	line->length++;
 }
-
-
-/*void add_char_to_line(struct buffer_node *line, char value, int position)
-{
-	printf ("%c", value);
-	
-	unsigned int count = 0;
-
-        struct character *node = line->head;
-
-	if (node == 0)
-	{
-		//Make first character node in the line
-		line->head = (character*)malloc(sizeof(character));
-		node = line->head;
-	}
-
-	if (position == 0)
-	{
-		node->value = value;
-		line->length++;
-		return;
-	}
-	
-	for (node; node != 0; node = node->next)
-	{
-		//If the character is to be placed at the end of the line
-		if (node->next == 0 && position == count + 1)
-		{
-			node->next = (character*)malloc(sizeof(character));
-		}
-
-		else if (count == position)
-		{
-			struct character *tmp = (character*)malloc(sizeof(character));
-
-			//This will occur on the itteration after the previous if statement
-			if (node->next == 0)
-				node->next = (character*)malloc(sizeof(character));
-			
-		        tmp->next = node->next;
-			node->next = tmp;
-			node->next->value = value;
-
-			break;
-		}	
-		count++;
-	}
-	
-	line->length++;
-}*/
 
 void free_buffer(struct text_buffer *buffer)
 {
@@ -173,7 +135,7 @@ void free_buffer(struct text_buffer *buffer)
 		
 	}
 
-//	free(buffer);
+	//free(buffer);
 }
 
 
@@ -189,7 +151,7 @@ char get_letter(struct buffer_node *node, unsigned int position)
 		{
 			return letter->value;
 		}
-		
+
 		count++;
 	}
 
@@ -208,5 +170,161 @@ void get_line(struct buffer_node *node, char *contents, unsigned int length)
 
 		letter = letter->next;
 	}
+
 	contents[length] = 0;
+}
+
+void delete_character(struct buffer_node *line, unsigned int position)
+{
+	struct character *node = line->head;
+
+	if (position == 0)
+	{
+		line->head = node->next;
+		free(node);
+		return;
+	}
+	
+	unsigned int count = 1;
+	
+	for (node; node != 0; node = node->next)
+	{
+		if (count == position)
+		{
+			struct character *tmp = node->next;
+			node->next = tmp->next;
+			free(tmp);
+			goto exit;
+		}
+
+		count++;
+	}
+exit:
+	line->length--;
+}
+
+void print_buffer(struct text_buffer *buffer)
+{
+	system ("/bin/stty cooked");
+
+	clear();
+
+	move_cursor(0,0);
+
+	struct buffer_node *line = buffer->head;
+
+	unsigned int count = 1;
+	
+	while (count < w.ws_row)
+	{
+		textcolor(BRIGHT, BLACK, WHITE);
+
+		if (count < 10)
+		{
+			printf("0%d", count);
+		}
+
+		else
+		{
+			printf ("%d", count);
+		}
+
+		textcolor(RESET, WHITE, BLACK);
+
+		unsigned int length = 0;
+
+		//This code is for adding the cursor at the end of the line. The problem is that at the beginning line == 0 meaning that the cursor will show at the end of the line.
+		if (count == cursor.line+1 && line != 0)
+		{
+			bool c_printed = 0;
+
+			for (struct character *node = line->head; node != 0; node = node->next)
+			{
+				if (++length > w.ws_col)
+				{
+					printf("\n  ");
+					length = 0;
+				}
+
+				if (node->value == 0)
+					break;
+
+				if (length != cursor.column)
+					printf("%c", node->value);
+				else
+				{
+				        textcolor(RESET, BLACK, WHITE);
+					printf("%c", node->value);
+					textcolor(RESET, WHITE, BLACK);
+					c_printed = true;
+				}
+			}
+
+			if (!c_printed)
+			{
+				textcolor(RESET, BLACK, WHITE);
+				printf(" ");
+				textcolor(RESET, WHITE, BLACK);
+			}
+			line = line->next;
+		}
+
+		else if (line != 0)
+		{
+			for (struct character *node = line->head; node != 0; node = node->next)
+			{
+				if (++length > w.ws_col)
+				{
+					printf("\n  ");
+					length = 0;
+				}
+
+				if (node->value == 0)
+					break;
+
+				printf("%c", node->value);
+			}
+			line = line->next;
+
+		}
+		
+		printf("\n");
+
+		count++;
+	}
+
+	move_cursor(cursor.line, cursor.column);
+
+	system ("/bin/stty raw");
+}
+
+void get_line_node(struct text_buffer *buffer, struct buffer_node **line, int num)
+{
+	*line = buffer->head;
+
+	for (num; num > 0 && (*line)->next != 0; num--)
+	{
+		*line = (*line)->next;
+	}
+}
+
+int get_line_length(struct buffer_node *line)
+{
+	int length = 1;
+
+	struct buffer_node *node = line;
+	
+	for (node; node != 0; node = node->next)
+		length++;
+
+	return length;
+}
+
+void get_prev_line(struct text_buffer buffer, struct buffer_node **line)
+{
+	struct buffer_node *tmp = buffer.head;
+
+	for (tmp; tmp->next != *line; tmp = tmp->next);
+
+	*line = tmp;
 }

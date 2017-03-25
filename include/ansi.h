@@ -22,11 +22,20 @@ void textcolor(int attr, int fg, int bg);
 
 void cursor_up(char lines);
 void cursor_down(char lines);
-void cursor_richt(char spaces);
+void cursor_right(char spaces);
 void cursor_left(char spaces);
 
 void clear();
 void clear_line();
 
+void move_cursor(char line, char column);
+
+struct cursor
+{
+	unsigned int line;
+	unsigned int column;
+};
+
+extern struct cursor cursor;
 
 #endif

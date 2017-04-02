@@ -93,8 +93,13 @@ int main(int argc, char *argv[])
 		{
 			if (buffer.x > 0)
 			{
-				delete_character(current_line, buffer.x-1);
 				buffer.x--;
+				delete_character(current_line, buffer.x);
+				if (buffer.x == 0)
+				{
+					current_line->head = NULL;
+					current_line->length = 0;
+				}
 			}
 			
 			else if (buffer.y > 0)
@@ -108,7 +113,7 @@ int main(int argc, char *argv[])
 					current_line->head = current_line->next->head;
 				}
 
-				else
+				else if (current_line->next->head != NULL)
 				{
 					struct character *tmp;
 					tmp = get_letter(current_line, current_line->length-1);
@@ -279,7 +284,7 @@ int main(int argc, char *argv[])
 		}
 
 		//Save file
-		else if (ch == '^' + 'S')
+		else if ((ch == 's' || ch == 'S') && insert_mode)
 		{
 			//pthread_join(auto_save_thread, 0);
 			buffer_to_file(file_name, &buffer);

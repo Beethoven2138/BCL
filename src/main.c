@@ -11,44 +11,30 @@
 
 //AUTHOR: SAXON SUPPLE
 
+//TODO: make everything relative to edit_start
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/ioctl.h>
 #include <stdbool.h>
-#include <pthread.h>
+#include <stddef.h>
+#include <ncurses.h>
 
 #include <fileops.h>
-#include <ansi.h>
 #include <buffer.h>
+#include <tui.h>
 
-#define FILENAME "/home/ssupple/Programming/text_editor-master/text_editor.txt"
-#define FILEBUFFERNAME "/home/ssupple/Programming/text_editor-master/text_editor.txt~"
-
-/*
-  Start at 0,0.
-  When user enters a char:
-  if (! arrow key or enter or delete)
-  Add it to the appropriate line at the correct position
-  Then move the cursor to the new location
-  
-  else:
-  
-*/
+#define FILENAME "/home/saxon/Programming/text_editorV1.1/text_editor.txt"
+#define FILEBUFFERNAME "/home/saxon/Programming/text_editorV1.1/text_editor.txt~"
 
 //valgrind --leak-check=full ./text_editor
 
-struct winsize w;
+//struct winsize w;
 struct text_buffer buffer;
-
-struct cursor cursor = {.line = 0, .column = 0};
 
 int main(int argc, char *argv[])
 {
-
 	char *file_buffer_name;
 	char *file_name;
-	
-        ioctl(0, TIOCGWINSZ, &w);
 
 	//If the user entered he address of the file that he wants to open
 	if (argc == 2)
@@ -68,19 +54,25 @@ int main(int argc, char *argv[])
 	if (file_buffer_name == 0)
 		return 0;
 
+	initscr();
+	cbreak();
+	keypad(stdscr, TRUE);
+	noecho();
+	refresh();
+
+	init_buffer(&buffer);
+
 	//Add the contents of the file to a buffer
         file_to_buffer(FILENAME, &buffer);
 
-	char c;
+	set_edit_buffer(&buffer, 0);
+
+        int ch;
 
 	bool insert_mode = false;
 
 	//pthread_t auto_save_thread;
 	//pthread_create(&auto_save_thread, 0, auto_save, (void*) &file_buffer_name);
-
-        system ("/bin/stty raw");
-
-	move_cursor(0,0);
 
 	print_buffer(&buffer);
 
@@ -89,111 +81,205 @@ int main(int argc, char *argv[])
 
 	while (1)
 	{
-		//Get info on screen width and height
-		ioctl(0, TIOCGWINSZ, &w);
-
 		//Get the char that the user enters
-		scanf("%c", &c);
-
-		if (c > 0x7F)
-		{
-			c = 0;
-			continue;
-		}
+		ch = getch();
 
 		//Quit
-		if (c == 'q')
-		{
-			clear();
-			move_cursor(0,0);
+		if (ch == KEY_F(2))
 			break;
-		}
 
 		//Delete key
-		else if (c == 0x7F && !insert_mode)
+		else if (ch == KEY_BACKSPACE || ch == KEY_DL || ch == 127)
 		{
-			delete_character(current_line, cursor.column-2);
-			if (cursor.column > 0)
+			if (buffer.x > 0)
 			{
-				cursor.column--;
-				if (cursor.column < 1 && cursor.line > 0)
+				delete_character(current_line, buffer.x-1);
+				buffer.x--;
+			}
+			
+			else if (buffer.y > 0)
+			{
+				buffer.y--;
+				get_prev_line(buffer, &current_line);
+				buffer.x = current_line->length;
+
+				if (current_line->length == 0)
 				{
-					//TODO Get hold of the previous line
-					get_prev_line(buffer, &current_line);
-					cursor.column = current_line->length+1;
-					cursor.line--;
+					current_line->head = current_line->next->head;
 				}
 
-				else if (cursor.column <= 0 && cursor.line == 0)
+				else
 				{
-					cursor.column = 0;
+					struct character *tmp;
+					tmp = get_letter(current_line, current_line->length-1);
+					tmp->next = current_line->next->head;
 				}
-			}
+
+				current_line->length += current_line->next->length;
+
+				if (current_line->next->next != NULL)
+				{
 				
-			else
-			{
-				if (cursor.line > 0)
+					delete_line(&buffer, current_line);
+
+					struct buffer_node* tmp_line = current_line->next;
+
+					for (tmp_line; tmp_line != 0; tmp_line = tmp_line->next)
+						tmp_line->lineno--;
+				}
+
+				else
 				{
-					cursor.line--;
-					get_prev_line(buffer, &current_line);
-					cursor.column = current_line->length;
+					free(current_line->next);
+					current_line->next = NULL;
+					buffer.tail = NULL;
+					buffer.node_count--;
+				        
 				}
 			}
-		}
+
+			set_edit_buffer(&buffer, 0);
+		}//Only issues when last line
 
 		//Forward arrow
-		else if ((c == 'f'|| c == 'F') && insert_mode)
-		{		
-			if (cursor.column < current_line->length+1)
-				cursor.column++;
-			else
+		else if (ch == KEY_RIGHT)
+		{
+			buffer.x++;
+
+			if (buffer.x > current_line->length && current_line->next != 0)
 			{
-				cursor.line++;
-				if (current_line->next != 0)
-				{
-					current_line = current_line->next;
-				}
+				current_line = current_line->next;
+				buffer.x = 0;
+				buffer.y++;
 			}
+
+			else if (buffer.x > current_line->length)
+				buffer.x = current_line->length;
 		}
 
 		//Backward arrow
-		else if ((c == 'b' || c == 'B') &&  insert_mode)
+		else if (ch == KEY_LEFT)
 		{
-			cursor.column--;
+			buffer.x--;
 			
-			if (cursor.column < 1 && cursor.line > 0)
+			if (buffer.x < 0 && buffer.y > 0)
 			{
 				//TODO Get hold of the previous line
 				get_prev_line(buffer, &current_line);
-				cursor.column = current_line->length+1;
-				cursor.line--;
+			        buffer.x = current_line->length;
+			        buffer.y--;
 			}
 
-			else if (cursor.column <= 0 && cursor.line == 0)
+		        if (buffer.x < 0)
+				buffer.x = 0;
+		}
+
+		//Up arrow
+		else if (ch == KEY_UP)
+		{
+			if (buffer.y > 0)
 			{
-				cursor.column = 0;
+				buffer.y--;
+				get_prev_line(buffer, &current_line);
+				if (buffer.x > current_line->length)
+				{
+					if (current_line->length != 0)
+						buffer.x = current_line->length;
+					else
+						buffer.x = 0;
+				}
 			}
 		}
 
-		//New line
-		else if (c == 'n')
+		//Down arrow
+		else if (ch == KEY_DOWN)
 		{
-			cursor.line++;
-
-			if (current_line->next == 0)
+			if (current_line->next != 0)
 			{
-				current_line->next = (buffer_node*)malloc(sizeof(buffer_node));
-				buffer.node_count++;
-				buffer.tail = current_line->next;
-				current_line->next->head = 0;
-				current_line->next->next = 0;
-				current_line->next->length = 0;
+				buffer.y++;
+
+				current_line = current_line->next;
+
+				if (buffer.y < buffer.node_count)
+				{
+					set_edit_buffer(&buffer, 0);
+				}
+
+				if (buffer.x > current_line->length)
+				{
+					if (current_line->length == 1)
+						buffer.x = 0;
+					else
+						buffer.x = current_line->length;
+				}
 			}
-			current_line = current_line->next;
+		}
+
+		//Enter key
+		else if (ch == 10 || ch == KEY_ENTER)
+		{
+			struct buffer_node *new_line = (buffer_node*)malloc(sizeof(buffer_node));
+
+			//Create new line
+			new_line->next = current_line->next;
+			current_line->next = new_line;
+
+			if (buffer.x != 0)
+			{
+				struct character *tmp_ch;
+				tmp_ch = get_letter(current_line, buffer.x-1);
+
+				struct character *tmp_next = tmp_ch->next;
+
+				tmp_ch->next = NULL;
+				
+				//Set Lengths of the lines
+				new_line->length = current_line->length - buffer.x;
+
+				//Set the head for the new line
+				new_line->head = tmp_next;
+			}
+
+			else
+			{
+				new_line->head = current_line->head;
+				new_line->length = current_line->length;
+				current_line->head = NULL;
+			}
+
+			new_line->lineno = current_line->lineno;
+			current_line->length = buffer.x;
+			current_line = new_line;
+
+			struct buffer_node *tmp = current_line;
+
+			size_t i = tmp->lineno;
+
+			for (tmp; tmp != NULL; tmp = tmp->next)
+			{
+				i++;
+				tmp->lineno = i;
+			}
+
+			buffer.node_count++;
+			buffer.y++;
+			buffer.x = 0;
+
+			set_edit_buffer(&buffer, 0);
+		}
+
+		//Tab
+		else if (ch == 9)
+		{
+			for (int i = 0; i < 8; i++)
+			{
+				add_char_to_line(current_line, ' ', buffer.x);
+				buffer.x++;
+			}
 		}
 
 		//Save file
-		else if (c == 'S' && insert_mode)
+		else if (ch == '^' + 'S')
 		{
 			//pthread_join(auto_save_thread, 0);
 			buffer_to_file(file_name, &buffer);
@@ -201,38 +287,47 @@ int main(int argc, char *argv[])
 		}
 
 		//Escape key
-		else if (c == 0x1B)
+		else if (ch == 0x1B)
 		{
 		        insert_mode = !insert_mode;
 		}
-		
+
 		else if (!insert_mode)
 		{
-			if (cursor.column > current_line->length)
-				add_char_to_line(current_line, c, current_line->length);
+			if (buffer.x > current_line->length)
+				buffer.x = current_line->length;
 
-			else
+		        else
+				add_char_to_line(current_line, ch, buffer.x);
 
-				//system ("/bin/stty cooked");
+		        buffer.x++;
 
-				add_char_to_line(current_line, c, cursor.column);
+			if (buffer.x >= current_line->length - 1 && current_line->next == NULL)
+			{
+				current_line->next = malloc(sizeof(buffer_node));
+				current_line->next->next = NULL;
+				current_line->next->length = 0;
+				current_line->next->lineno = current_line->lineno + 1;
+				current_line->next->head = NULL;
+				buffer.tail = NULL;
+				buffer.node_count++;
 
-			cursor.column++;
-
-			clear();
-
-			//move_cursor(0,2);
+				set_edit_buffer(&buffer, 0);
+			}
 		}
+		
+		wclear(buffer.text_win->win);
 		print_buffer(&buffer);
-
-		move_cursor(0,0);
 	}
 
         buffer_to_file(FILEBUFFERNAME, &buffer);
 
         free_buffer(&buffer);
 
-        system ("/bin/stty cooked");
+	endwin();
 
         return 0;
 }
+
+
+//If text added at the end of a line, then create a new line at the bottom if next == NULL

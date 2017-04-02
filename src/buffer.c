@@ -1,15 +1,10 @@
 #include <buffer.h>
-#include <ansi.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/ioctl.h>
 
 int file_to_buffer(char *file_name, struct text_buffer *buffer)
 {
 	FILE *fp = fopen(file_name, "r");
 
-	if (fp == 0 || buffer == 0)
+	if (fp == NULL || buffer == NULL)
 		return 0;
 
 	struct buffer_node *node;
@@ -22,10 +17,11 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 	buffer->node_count = 1;
 
 	node->length = 0;
+	node->lineno = 1;
 
 	int c;
 
-	while(1)
+	while (1)
 	{
 		c = fgetc(fp);
 
@@ -40,30 +36,33 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 		{
 			//Create a new line
 			node->next = (buffer_node*)malloc(sizeof(buffer_node));
+			node->next->lineno = node->lineno+1;
 			node = node->next;
-			node->next = 0;
-			node->head = 0;
+			node->next = NULL;
+			node->head = NULL;
+			node->length = 0;
+
 
 			buffer->tail = node;
 			buffer->node_count++;
 		}
-		
+
 		else
 			goto exit;
 	}
 
 exit:
 	fclose(fp);
-	node->next = 0;
+	node->next = NULL;
 	return 1;
 }
 
 void add_char_to_line(struct buffer_node *line, char value, int position)
 {
-	if (line->head == 0)
+	if (line->head == NULL)
 	{
 		line->head = (character*)malloc(sizeof(character));
-		line->head->next = 0;
+		line->head->next = NULL;
 		line->head->value = 0;
 	}
 	
@@ -83,11 +82,11 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 	for (unsigned int count = 1; count <= position; count++)
 	{
 		//Append at end of the line
-		if (letter->next == 0)
+		if (letter->next == NULL)
 		{
 			letter->next = (character*)malloc(sizeof(character));
 			letter->next->value = value;
-			letter->next->next = 0;
+			letter->next->next = NULL;
 			goto exit;
 		}
 
@@ -110,7 +109,7 @@ void free_buffer(struct text_buffer *buffer)
 {
 	struct buffer_node *node = buffer->head;
 
-	if (node != 0)
+	if (node != NULL)
 	{
 		struct buffer_node *tmp_node;
 
@@ -135,21 +134,23 @@ void free_buffer(struct text_buffer *buffer)
 		
 	}
 
+	destroy_win(buffer->text_win->win);
+	destroy_win(buffer->command_win->win);
 	//free(buffer);
 }
 
 
-char get_letter(struct buffer_node *node, unsigned int position)
+struct character* get_letter(struct buffer_node *node, size_t position)
 {
-	unsigned int count = 0;
+        size_t count = 0;
 
 	struct character *letter = node->head;
 	
-	for (letter; letter != 0; letter = letter->next)
+	for (letter; letter != NULL; letter = letter->next)
 	{
 		if (count == position)
 		{
-			return letter->value;
+			return letter;
 		}
 
 		count++;
@@ -158,7 +159,7 @@ char get_letter(struct buffer_node *node, unsigned int position)
 	return 0;
 }
 
-void get_line(struct buffer_node *node, char *contents, unsigned int length)
+void get_line(struct buffer_node *node, char *contents, size_t length)
 {
 	struct character *letter;
 
@@ -180,144 +181,71 @@ void delete_character(struct buffer_node *line, unsigned int position)
 
 	if (position == 0)
 	{
-		line->head = node->next;
+	        line->head = node->next;
 		free(node);
 		return;
 	}
-	
-	unsigned int count = 1;
-	
-	for (node; node != 0; node = node->next)
+
+        size_t count = 1;
+
+	for (node; node != NULL; node = node->next)
 	{
 		if (count == position)
 		{
-			struct character *tmp = node->next;
+		        struct character *tmp = node->next;
 			node->next = tmp->next;
 			free(tmp);
-			goto exit;
+			line->length--;
+			return;
 		}
 
 		count++;
 	}
-exit:
-	line->length--;
 }
 
 void print_buffer(struct text_buffer *buffer)
 {
-	system ("/bin/stty cooked");
+	int x = 0;
+	int y = 0;
 
-	clear();
+	struct buffer_node *line = buffer->edit_start;
 
-	move_cursor(0,0);
+	struct character *value;
 
-	struct buffer_node *line = buffer->head;
+	move(0,0);
+	printw("Text editor Version 1.1.   AUTHOR: SAXON SUPPLE");
+	refresh();
+	move(0,0);
 
-	unsigned int count = 1;
-	
-	while (count < w.ws_row)
+	for (line; line != buffer->edit_end->next; line = line->next)
 	{
-		textcolor(BRIGHT, BLACK, WHITE);
+		mvwprintw(buffer->text_win->win, y+1, x+1, "0%d ", line->lineno);
 
-		if (count < 10)
+		value = line->head;
+
+		for (value; value != NULL; value = value->next)
 		{
-			printf("0%d", count);
+			mvwprintw(buffer->text_win->win, y+1, x+4, "%c", value->value);
+			x++;
 		}
 
-		else
-		{
-			printf ("%d", count);
-		}
-
-		textcolor(RESET, WHITE, BLACK);
-
-		unsigned int length = 0;
-
-		//This code is for adding the cursor at the end of the line. The problem is that at the beginning line == 0 meaning that the cursor will show at the end of the line.
-		if (count == cursor.line+1 && line != 0)
-		{
-			bool c_printed = 0;
-
-			for (struct character *node = line->head; node != 0; node = node->next)
-			{
-				if (++length > w.ws_col)
-				{
-					printf("\n  ");
-					length = 0;
-				}
-
-				if (node->value == 0)
-					break;
-
-				if (length != cursor.column)
-					printf("%c", node->value);
-				else
-				{
-				        textcolor(RESET, BLACK, WHITE);
-					printf("%c", node->value);
-					textcolor(RESET, WHITE, BLACK);
-					c_printed = true;
-				}
-			}
-
-			if (!c_printed)
-			{
-				textcolor(RESET, BLACK, WHITE);
-				printf(" ");
-				textcolor(RESET, WHITE, BLACK);
-			}
-			line = line->next;
-		}
-
-		else if (line != 0)
-		{
-			for (struct character *node = line->head; node != 0; node = node->next)
-			{
-				if (++length > w.ws_col)
-				{
-					printf("\n  ");
-					length = 0;
-				}
-
-				if (node->value == 0)
-					break;
-
-				printf("%c", node->value);
-			}
-			line = line->next;
-
-		}
-		
-		printf("\n");
-
-		count++;
+		y++;
+		x = 0;
 	}
 
-	move_cursor(cursor.line, cursor.column);
+	move(buffer->y+2, buffer->x+4);
 
-	system ("/bin/stty raw");
+	wrefresh(buffer->text_win->win);
 }
 
 void get_line_node(struct text_buffer *buffer, struct buffer_node **line, int num)
 {
 	*line = buffer->head;
 
-	for (num; num > 0 && (*line)->next != 0; num--)
+	for (num; num > 0 && (*line)->next != NULL; num--)
 	{
 		*line = (*line)->next;
 	}
-}
-
-int get_line_length(struct buffer_node *line)
-{
-	int length = 1;
-
-	struct buffer_node *node = line;
-	
-	for (node; node != 0; node = node->next)
-		length++;
-
-	return length;
 }
 
 void get_prev_line(struct text_buffer buffer, struct buffer_node **line)
@@ -327,4 +255,68 @@ void get_prev_line(struct text_buffer buffer, struct buffer_node **line)
 	for (tmp; tmp->next != *line; tmp = tmp->next);
 
 	*line = tmp;
+}
+
+void delete_line(struct text_buffer *buffer, struct buffer_node *prev)
+{
+	if (prev->next->next == NULL)
+	{
+		free(prev->next);
+		buffer->tail = prev;
+		return;
+	}
+
+	struct buffer_node *tmp = prev->next->next;
+
+	free(prev->next);
+
+	if (prev->next == buffer->tail)
+		buffer->tail = prev;
+	
+        prev->next = tmp;
+
+	buffer->node_count--;
+}
+
+void init_buffer(struct text_buffer *buffer)
+{
+	buffer->x = 0;
+	buffer->y = 0;
+	buffer->text_win = (struct window_data*)malloc(sizeof(struct window_data));
+	buffer->command_win = (struct window_data*)malloc(sizeof(struct window_data));
+	buffer->text_win->x = 0;
+	buffer->text_win->y = 1;
+	buffer->text_win->w = COLS;
+	buffer->text_win->h = LINES - 1;
+
+	buffer->command_win->x = 0;
+	buffer->command_win->y = LINES - 1;
+	buffer->command_win->w = COLS;
+	buffer->command_win->h = 1;
+
+	buffer->text_win->win = create_new_win(buffer->text_win->x, buffer->text_win->y, buffer->text_win->w,
+					       buffer->text_win->h);
+
+	buffer->command_win->win = create_new_win(buffer->command_win->x, buffer->command_win->y,
+						  buffer->command_win->w, buffer->command_win->h);
+}
+
+void set_edit_buffer(struct text_buffer *buffer, int line)
+{
+	buffer->edit_start = buffer->head;
+
+	for (line; line > 0; line--)
+	{
+		buffer->edit_start = buffer->edit_start->next;
+	}
+
+	buffer->edit_end = buffer->edit_start;
+
+        for (int i = 1; i < LINES; i++)
+	{
+		if (buffer->edit_end->next == NULL)
+			break;
+		else
+			buffer->edit_end = buffer->edit_end->next;
+	}
 }

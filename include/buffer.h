@@ -3,6 +3,12 @@
 
 #include <unistd.h>
 #include <stdbool.h>
+#include <ncurses.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <tui.h>
 
 /*
 The buffer is structured by having a singly linked list of lines called buffer_node
@@ -18,19 +24,31 @@ typedef struct character
 
 typedef struct buffer_node
 {
-	int length;
+	size_t length;
+        size_t lineno;//TODO: add this in all the functions
 	struct character *head;
 	struct buffer_node *next;
 } buffer_node;
 
 typedef struct text_buffer
 {
+	int x, y;
 	struct buffer_node *head;
 	struct buffer_node *tail;
-	unsigned int node_count;
+        size_t node_count;
+
+	struct buffer_node *edit_start;
+	struct buffer_node *edit_end;
+
+	struct window_data *text_win;
+	struct window_data *command_win;
+
+	//TODO: Add support for linked list of buffers
+	struct text_buffer *next;
+	struct text_buffer *prev;
 } text_buffer;
 
-extern struct winsize w;
+//extern struct winsize w;
 extern struct text_buffer buffer;
 
 void add_char_to_line(struct buffer_node *line, char value, int position);
@@ -39,9 +57,9 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer);
 
 void free_buffer(struct text_buffer *buffer);
 
-char get_letter(struct buffer_node *node, unsigned int position);
+struct character* get_letter(struct buffer_node *node, size_t position);
 
-void get_line(struct buffer_node *node, char *contents, unsigned int length);
+void get_line(struct buffer_node *node, char *contents, size_t length);
 
 void get_line_node(struct text_buffer *buffer, struct buffer_node **line, int num);
 
@@ -49,8 +67,14 @@ void delete_character(struct buffer_node *line, unsigned int position);
 
 void print_buffer(struct text_buffer *buffer);
 
-int get_line_length(struct buffer_node *line);
-
 void get_prev_line(struct text_buffer buffer, struct buffer_node **line);
 
+void delete_line(struct text_buffer *buffer, struct buffer_node *prev);
+
+void init_buffer(struct text_buffer *buffer);
+
+void set_edit_buffer(struct text_buffer *buffer, int line);
+
 #endif
+
+//int mvwprintw(WINDOW *win, int y, int x, char *fmt [, arg] ...);

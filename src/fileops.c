@@ -66,11 +66,14 @@ int buffer_to_file(char *file_name, struct text_buffer *buffer)
 	
 	for (node; node != NULL; node = node->next)
 	{
-		char *line = (char*)malloc(sizeof(char) * (node->length+1));
-		get_line(node, line, node->length);
-		fprintf(fp, "%s", line);
-		fputc(10, fp);
-		free(line);
+		if (node->head != NULL)
+		{
+			char *line = (char*)malloc(sizeof(char) * (node->length+1));
+			get_line(node, line, node->length);
+			fprintf(fp, "%s", line);
+			fputc(10, fp);
+			free(line);
+		}
 	}
 	fclose(fp);
 
@@ -87,3 +90,5 @@ void* auto_save(void *file_buffer_name)
 	
 	return 0;
 }
+
+//Happens because you're passing as tail a null character

@@ -1,8 +1,8 @@
-GCCPARAMS = -g -Iinclude -O3
+GCCPARAMS = -g -Iinclude -O3 -lncurses
 
 OBJECTS=obj/main.o \
 	obj/fileops.o \
-	obj/ansi.o \
+	obj/tui.o \
 	obj/buffer.o \
 
 

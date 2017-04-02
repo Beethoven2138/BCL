@@ -7,7 +7,7 @@
 char* create_file_buffer(char *file_name)
 {
 	FILE *fp = fopen(file_name, "r");
-	if(fp != 0)
+	if(fp != NULL)
 	{
 		char* file_buffer_name = (char*)malloc(strlen(file_name)*sizeof(char) + 2*sizeof(char));
 	        strcpy(file_buffer_name, file_name);
@@ -27,11 +27,11 @@ char* create_file_buffer(char *file_name)
 int copy_file(char *src_file_name, char *dest_file_name)
 {
 	FILE *src = fopen(src_file_name, "r");
-	if(src == 0)
+	if(src == NULL)
 		return 0;
 
 	FILE *dest = fopen(dest_file_name, "w+");
-	if(dest == 0)
+	if(dest == NULL)
 		return 0;
 
 	int c;
@@ -59,12 +59,12 @@ int buffer_to_file(char *file_name, struct text_buffer *buffer)
 	
 	FILE *fp = fopen(file_name, "w+");
 
-	if (fp == 0)
+	if (fp == NULL)
 		return 0;
 
 	struct buffer_node *node = buffer->head;
 	
-	for (node; node->next != 0; node = node->next)
+	for (node; node != NULL; node = node->next)
 	{
 		char *line = (char*)malloc(sizeof(char) * (node->length+1));
 		get_line(node, line, node->length);

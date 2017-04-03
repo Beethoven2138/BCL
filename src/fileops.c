@@ -74,6 +74,8 @@ int buffer_to_file(char *file_name, struct text_buffer *buffer)
 			fputc(10, fp);
 			free(line);
 		}
+		else
+			fputc(10, fp);
 	}
 	fclose(fp);
 

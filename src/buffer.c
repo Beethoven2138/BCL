@@ -63,7 +63,8 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 	{
 		line->head = (character*)malloc(sizeof(character));
 		line->head->next = NULL;
-		line->head->value = 0;
+		line->head->value = value;
+		goto exit;
 	}
 	
 	struct character *letter = line->head;
@@ -235,6 +236,7 @@ void print_buffer(struct text_buffer *buffer)
 
 	move(buffer->y+2, buffer->x+4);
 
+	box(buffer->text_win->win, 0, 0);
 	wrefresh(buffer->text_win->win);
 }
 
@@ -280,6 +282,8 @@ void delete_line(struct text_buffer *buffer, struct buffer_node *prev)
 
 void init_buffer(struct text_buffer *buffer)
 {
+	setlocale(LC_ALL, "en_GB.UTF-8");
+
 	buffer->x = 0;
 	buffer->y = 0;
 	buffer->text_win = (struct window_data*)malloc(sizeof(struct window_data));
@@ -287,18 +291,21 @@ void init_buffer(struct text_buffer *buffer)
 	buffer->text_win->x = 0;
 	buffer->text_win->y = 1;
 	buffer->text_win->w = COLS;
-	buffer->text_win->h = LINES - 1;
+	buffer->text_win->h = LINES - 3;
 
 	buffer->command_win->x = 0;
-	buffer->command_win->y = LINES - 1;
+	buffer->command_win->y = LINES - 3;
 	buffer->command_win->w = COLS;
-	buffer->command_win->h = 1;
+	buffer->command_win->h = 3;
 
 	buffer->text_win->win = create_new_win(buffer->text_win->x, buffer->text_win->y, buffer->text_win->w,
 					       buffer->text_win->h);
 
 	buffer->command_win->win = create_new_win(buffer->command_win->x, buffer->command_win->y,
 						  buffer->command_win->w, buffer->command_win->h);
+	
+	mvwprintw(buffer->command_win->win, 1, 1, "S=save, F2=quit");
+	wrefresh(buffer->command_win->win);
 }
 
 void set_edit_buffer(struct text_buffer *buffer, int line)
@@ -312,7 +319,7 @@ void set_edit_buffer(struct text_buffer *buffer, int line)
 
 	buffer->edit_end = buffer->edit_start;
 
-        for (int i = 1; i < LINES; i++)
+        for (int i = 1; i < buffer->text_win->h; i++)
 	{
 		if (buffer->edit_end->next == NULL)
 			break;

@@ -28,7 +28,6 @@
 
 //valgrind --leak-check=full ./text_editor
 
-//struct winsize w;
 struct text_buffer buffer;
 
 int main(int argc, char *argv[])
@@ -40,7 +39,9 @@ int main(int argc, char *argv[])
 	if (argc == 2)
 	{
 		file_buffer_name = create_file_buffer(argv[1]);
-		char *file_name = argv[1];
+		if (file_buffer_name == 0)
+			goto exit;
+	        file_name = argv[1];
 	}
 
 	//Open the default one instead
@@ -54,6 +55,8 @@ int main(int argc, char *argv[])
 	if (file_buffer_name == 0)
 		return 0;
 
+	//Add the contents of the file to a buffer
+
 	initscr();
 	cbreak();
 	keypad(stdscr, TRUE);
@@ -62,11 +65,11 @@ int main(int argc, char *argv[])
 
 	init_buffer(&buffer);
 
-	//Add the contents of the file to a buffer
-        file_to_buffer(FILENAME, &buffer);
+	if (file_to_buffer(file_name, &buffer) == 0)
+		goto exit;
 
 	set_edit_buffer(&buffer, 0);
-
+	
         int ch;
 
 	bool insert_mode = false;
@@ -86,7 +89,15 @@ int main(int argc, char *argv[])
 
 		//Quit
 		if (ch == KEY_F(2))
-			break;
+		{
+			buffer_to_file(file_buffer_name, &buffer);
+
+			free_buffer(&buffer);
+
+			endwin();
+
+			goto exit;
+		}
 
 		//Delete key
 		else if (ch == KEY_BACKSPACE || ch == KEY_DL || ch == 127)
@@ -273,21 +284,13 @@ int main(int argc, char *argv[])
 			set_edit_buffer(&buffer, 0);
 		}
 
-		//Tab
-		else if (ch == 9)
-		{
-			for (int i = 0; i < 8; i++)
-			{
-				add_char_to_line(current_line, ' ', buffer.x);
-				buffer.x++;
-			}
-		}
-
 		//Save file
 		else if ((ch == 's' || ch == 'S') && insert_mode)
 		{
 			//pthread_join(auto_save_thread, 0);
 			buffer_to_file(file_name, &buffer);
+			free_buffer(&buffer);
+			endwin();
 			break;
 		}
 
@@ -320,19 +323,19 @@ int main(int argc, char *argv[])
 				set_edit_buffer(&buffer, 0);
 			}
 		}
-		
+
+		/*if (buffer.x > 1 && (((buffer.x + 1) % (buffer.text_win->h - 2)) == 0))
+		{
+			set_edit_buffer(&buffer, (buffer.x+1)-((buffer.text_win->h)/2));
+			}*/
+
 		wclear(buffer.text_win->win);
 		print_buffer(&buffer);
 	}
-
-        buffer_to_file(FILEBUFFERNAME, &buffer);
-
-        free_buffer(&buffer);
-
-	endwin();
-
+	
+exit:
         return 0;
 }
 
 
-//If text added at the end of a line, then create a new line at the bottom if next == NULL
+//Change edit nodes when y % buffer height == 0

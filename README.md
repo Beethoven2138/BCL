@@ -1,5 +1,6 @@
 # BCL
 A command line based text editor
+
 BCL stands for Buggy Collection of Linked-lists
 
 PLAN:

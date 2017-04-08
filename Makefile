@@ -1,19 +1,19 @@
-GCCPARAMS = -g -Iinclude -O3 -lncurses
+GCCPARAMS = -Iinclude -lncurses -O3
 
 OBJECTS=obj/main.o \
 	obj/fileops.o \
-	obj/tui.o \
 	obj/buffer.o \
+	obj/tui.o \
 
 
 obj/%.o: src/%.c
 	mkdir -p $(@D)
 	gcc $(GCCPARAMS) -c -o $@ $<
 
-all: text_editor
+all: bcl
 
-text_editor: $(OBJECTS)
-	gcc $(OBJECTS) -o text_editor $(GCCPARAMS)
+bcl: $(OBJECTS)
+	gcc $(OBJECTS) -o bcl $(GCCPARAMS)
 
 clean:
-	rm -rf *.o text_editor obj
+	rm -rf bcl obj

@@ -1,13 +1,13 @@
-/*  text_editor is free software: you can redistribute it and/or modify
+/*  BCL is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-    text_editor is distributed in the hope that it will be useful,
+    BCL is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
     You should have received a copy of the GNU General Public License
-    along with text_editor.  If not, see <http://www.gnu.org/licenses/>.*/
+    along with BCL.  If not, see <http://www.gnu.org/licenses/>.*/
 
 //AUTHOR: SAXON SUPPLE
 
@@ -18,13 +18,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <ncurses.h>
+#include <unistd.h>
 
 #include <fileops.h>
 #include <buffer.h>
 #include <tui.h>
-
-#define FILENAME "/home/saxon/Programming/text_editorV1.1/text_editor.txt"
-#define FILEBUFFERNAME "/home/saxon/Programming/text_editorV1.1/text_editor.txt~"
 
 //valgrind --leak-check=full ./text_editor
 
@@ -38,24 +36,18 @@ int main(int argc, char *argv[])
 	//If the user entered he address of the file that he wants to open
 	if (argc == 2)
 	{
-		file_buffer_name = create_file_buffer(argv[1]);
-		if (file_buffer_name == 0)
-			goto exit;
 	        file_name = argv[1];
+		file_buffer_name = create_file_buffer(/*argv[1]*/file_name);
+		if (file_buffer_name == 0)
+		        exit(1);
+		//file_name = argv[1];
 	}
 
-	//Open the default one instead
 	else
-	{
-		printf ("%d", argc);
-		file_buffer_name = create_file_buffer(FILENAME);
-		file_name = FILENAME;
-	}
+	        exit(1);
 
-	if (file_buffer_name == 0)
-		return 0;
-
-	//Add the contents of the file to a buffer
+	if (file_buffer_name == NULL)
+	        exit(1);
 
 	initscr();
 	cbreak();
@@ -66,10 +58,10 @@ int main(int argc, char *argv[])
 	init_buffer(&buffer);
 
 	if (file_to_buffer(file_name, &buffer) == 0)
-		goto exit;
+	        exit(1);
 
 	set_edit_buffer(&buffer, 0);
-	
+
         int ch;
 
 	bool insert_mode = false;
@@ -96,7 +88,7 @@ int main(int argc, char *argv[])
 
 			endwin();
 
-			goto exit;
+		        exit(0);
 		}
 
 		//Delete key
@@ -105,19 +97,22 @@ int main(int argc, char *argv[])
 			if (buffer.x > 0)
 			{
 				buffer.x--;
+				buffer.xPos--;
 				delete_character(current_line, buffer.x);
-				if (buffer.x == 0)
+				/*if (buffer.x == 0)
 				{
 					current_line->head = NULL;
 					current_line->length = 0;
-				}
+				}*/
 			}
 			
 			else if (buffer.y > 0)
 			{
 				buffer.y--;
+				buffer.yPos--;
 				get_prev_line(buffer, &current_line);
 				buffer.x = current_line->length;
+				buffer.xPos = current_line->length;
 
 				if (current_line->length == 0)
 				{
@@ -152,42 +147,60 @@ int main(int argc, char *argv[])
 					buffer.node_count--;
 				        
 				}
+
+				if (buffer.yPos == 0 && buffer.y > (buffer.text_win->h/2)-1)
+				{
+					set_edit_buffer(&buffer, buffer.y - buffer.text_win->h/2);
+					buffer.yPos = (buffer.text_win->h-1)/2;
+				}
 			}
 
-			set_edit_buffer(&buffer, 0);
+			set_edit_buffer(&buffer, buffer.edit_start->lineno-1);
 		}//Only issues when last line
 
 		//Forward arrow
 		else if (ch == KEY_RIGHT)
 		{
 			buffer.x++;
+			buffer.xPos++;
 
 			if (buffer.x > current_line->length && current_line->next != 0)
 			{
 				current_line = current_line->next;
 				buffer.x = 0;
+				buffer.xPos = 0;
 				buffer.y++;
+				buffer.yPos++;
 			}
 
 			else if (buffer.x > current_line->length)
+			{
 				buffer.x = current_line->length;
+				buffer.xPos = current_line->length;
+			}
 		}
 
 		//Backward arrow
 		else if (ch == KEY_LEFT)
 		{
 			buffer.x--;
+			buffer.xPos--;
 			
 			if (buffer.x < 0 && buffer.y > 0)
 			{
 				//TODO Get hold of the previous line
 				get_prev_line(buffer, &current_line);
 			        buffer.x = current_line->length;
+				buffer.xPos = current_line->length;
 			        buffer.y--;
+				buffer.yPos--;
 			}
 
 		        if (buffer.x < 0)
+			{
 				buffer.x = 0;
+				buffer.xPos = 0;
+			}
 		}
 
 		//Up arrow
@@ -196,13 +209,27 @@ int main(int argc, char *argv[])
 			if (buffer.y > 0)
 			{
 				buffer.y--;
+				buffer.yPos--;
 				get_prev_line(buffer, &current_line);
 				if (buffer.x > current_line->length)
 				{
 					if (current_line->length != 0)
+					{
 						buffer.x = current_line->length;
+						buffer.xPos = current_line->length;
+					}
+
 					else
+					{
 						buffer.x = 0;
+						buffer.xPos = 0;
+					}
+				}
+
+				if (buffer.yPos == 0 && buffer.y > (buffer.text_win->h/2)-1)
+				{
+					set_edit_buffer(&buffer, buffer.y - buffer.text_win->h/2);
+					buffer.yPos = (buffer.text_win->h-1)/2;
 				}
 			}
 		}
@@ -213,20 +240,34 @@ int main(int argc, char *argv[])
 			if (current_line->next != 0)
 			{
 				buffer.y++;
+				buffer.yPos++;
 
 				current_line = current_line->next;
 
 				if (buffer.y < buffer.node_count)
 				{
-					set_edit_buffer(&buffer, 0);
+					set_edit_buffer(&buffer, buffer.edit_start->lineno-1);
 				}
 
 				if (buffer.x > current_line->length)
 				{
 					if (current_line->length == 1)
+					{
 						buffer.x = 0;
+						buffer.xPos = 0;
+					}
+
 					else
+					{
 						buffer.x = current_line->length;
+						buffer.xPos = current_line->length;
+					}
+				}
+
+				if (buffer.yPos + 2 == buffer.text_win->h)
+				{
+					set_edit_buffer(&buffer, (buffer.edit_start->lineno-1) + buffer.text_win->h/2);
+					buffer.yPos = (buffer.text_win->h-2)/2;
 				}
 			}
 		}
@@ -235,7 +276,7 @@ int main(int argc, char *argv[])
 		else if (ch == 10 || ch == KEY_ENTER)
 		{
 			struct buffer_node *new_line = (buffer_node*)malloc(sizeof(buffer_node));
-
+			
 			//Create new line
 			new_line->next = current_line->next;
 			current_line->next = new_line;
@@ -279,9 +320,26 @@ int main(int argc, char *argv[])
 
 			buffer.node_count++;
 			buffer.y++;
+			buffer.yPos++;
 			buffer.x = 0;
+			buffer.xPos = 0;
 
-			set_edit_buffer(&buffer, 0);
+			set_edit_buffer(&buffer, buffer.edit_start->lineno-1);
+	
+			//if (buffer.y > 1 && (buffer.y % (buffer.text_win->h - 3) == 0))
+			/*if (buffer.y + 1 == buffer.edit_end->lineno &&
+			    buffer.y + 2 >= buffer.text_win->h &&
+			    buffer.edit_end->next != NULL)
+			{
+				buffer.edit_start = buffer.edit_start->next;
+				buffer.edit_end = buffer.edit_end->next;
+				}*/
+
+			if (buffer.yPos + 2 == buffer.text_win->h)
+			{
+				set_edit_buffer(&buffer, (buffer.edit_start->lineno-1) + (int)buffer.text_win->h/2);
+				buffer.yPos = (int)(buffer.text_win->h-2)/2;
+			}
 		}
 
 		//Save file
@@ -302,13 +360,38 @@ int main(int argc, char *argv[])
 
 		else if (!insert_mode)
 		{
-			if (buffer.x > current_line->length)
-				buffer.x = current_line->length;
+			/*if (buffer.x >= buffer.text_win->w - 6)//Check this
+			{
+				current_line->add_new_line = false;
+			        struct buffer_node *tmp = (buffer_node*)malloc(sizeof(buffer_node));
+				tmp->next = current_line->next;
+				current_line->next = tmp;
+				current_line->next->lineno = current_line->lineno;
+				buffer.node_count++;
+				current_line = current_line->next;
+				current_line->length = 0;
+				current_line->head = NULL;
+				add_char_to_line(current_line, ch, 0);
 
-		        else
+				buffer.x = 0;
+				buffer.xPos = 0;
+				buffer.y++;
+				buffer.yPos++;
+
+				if (buffer.yPos + 2 == buffer.text_win->h)
+				{
+					set_edit_buffer(&buffer, (buffer.edit_start->lineno-1) + (int)buffer.text_win->h/2);
+					buffer.yPos = (int)(buffer.text_win->h-2)/2;
+				}
+
+				set_edit_buffer(&buffer, buffer.edit_start->lineno - 1);
+			}*/
+
+		        //else
 				add_char_to_line(current_line, ch, buffer.x);
 
 		        buffer.x++;
+			buffer.xPos++;
 
 			if (buffer.x >= current_line->length - 1 && current_line->next == NULL)
 			{
@@ -320,22 +403,13 @@ int main(int argc, char *argv[])
 				buffer.tail = NULL;
 				buffer.node_count++;
 
-				set_edit_buffer(&buffer, 0);
+				set_edit_buffer(&buffer, buffer.edit_start->lineno - 1);
 			}
 		}
-
-		/*if (buffer.x > 1 && (((buffer.x + 1) % (buffer.text_win->h - 2)) == 0))
-		{
-			set_edit_buffer(&buffer, (buffer.x+1)-((buffer.text_win->h)/2));
-			}*/
 
 		wclear(buffer.text_win->win);
 		print_buffer(&buffer);
 	}
-	
-exit:
+
         return 0;
 }
-
-
-//Change edit nodes when y % buffer height == 0

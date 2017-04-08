@@ -1,8 +1,5 @@
 #include <fileops.h> 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 char* create_file_buffer(char *file_name)
 {
@@ -13,11 +10,8 @@ char* create_file_buffer(char *file_name)
 	        strcpy(file_buffer_name, file_name);
 		
 	        strcat(file_buffer_name, "~");
-		
-		FILE *file_buffer = fopen(file_buffer_name, "w+");
+
 		fclose(fp);
-		fclose(file_buffer);
-		free(file_buffer_name);
 		return file_buffer_name;
 	}
 
@@ -42,7 +36,7 @@ int copy_file(char *src_file_name, char *dest_file_name)
 
 		if(feof(src))
 			break;
-		
+
 		fputc(c, dest);
 	}
 
@@ -56,14 +50,13 @@ int copy_file(char *src_file_name, char *dest_file_name)
 
 int buffer_to_file(char *file_name, struct text_buffer *buffer)
 {
-	
 	FILE *fp = fopen(file_name, "w+");
 
 	if (fp == NULL)
 		return 0;
 
 	struct buffer_node *node = buffer->head;
-	
+
 	for (node; node != NULL; node = node->next)
 	{
 		if (node->head != NULL)
@@ -74,9 +67,11 @@ int buffer_to_file(char *file_name, struct text_buffer *buffer)
 			fputc(10, fp);
 			free(line);
 		}
+
 		else
 			fputc(10, fp);
 	}
+
 	fclose(fp);
 
 	return 1;
@@ -92,5 +87,3 @@ void* auto_save(void *file_buffer_name)
 	
 	return 0;
 }
-
-//Happens because you're passing as tail a null character

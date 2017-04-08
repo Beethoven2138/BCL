@@ -27,8 +27,21 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 
 		if (!feof(fp) && c != 10)
 		{
-			//Create a function to add a character to the character linked list
-			add_char_to_line(node, (char)c, node->length);
+		        //if (node->length < buffer->text_win->w - 5)
+				add_char_to_line(node, (char)c, node->length);
+
+				/*else
+			{
+				node->add_new_line = false;
+				node->next = (buffer_node*)malloc(sizeof(buffer_node));
+				node->next->lineno = node->lineno;
+				node = node->next;
+				node->next = NULL;
+				node->head = NULL;
+				node->length = 0;
+				node->add_new_line = true;
+				add_char_to_line(node, (char)c, 0);
+				}*/
 		}
 
 		//New Line character
@@ -41,7 +54,6 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 			node->next = NULL;
 			node->head = NULL;
 			node->length = 0;
-
 
 			buffer->tail = node;
 			buffer->node_count++;
@@ -184,6 +196,7 @@ void delete_character(struct buffer_node *line, unsigned int position)
 	{
 	        line->head = node->next;
 		free(node);
+		line->length--;
 		return;
 	}
 
@@ -206,35 +219,93 @@ void delete_character(struct buffer_node *line, unsigned int position)
 
 void print_buffer(struct text_buffer *buffer)
 {
-	int x = 0;
-	int y = 0;
+        size_t x = 0;
+	size_t y = 0;
+//	size_t x_offset = 0;
+	//	size_t y_offset = 0;
+	//bool overflow = false;
+	//size_t tab_num = 0;
+	bool passed_line = false;
 
 	struct buffer_node *line = buffer->edit_start;
 
 	struct character *value;
 
 	move(0,0);
-	printw("Text editor Version 1.1.   AUTHOR: SAXON SUPPLE");
+	printw(" Buggy Collection of Linked-lists Version 1.2   AUTHOR: SAXON SUPPLE");
 	refresh();
 	move(0,0);
 
-	for (line; line != buffer->edit_end->next; line = line->next)
+
+	/*
+	  To implement multiple line buffer_nodes:
+	  For knowing where the cursor should be on the y-axis
+	  Until we reach the current line, we're going to add up all the lines that the previous buffer_nodes
+	  occupy by doing length / width;
+
+	  For the x-axis
+	  Do line->length % buffer->text_win->w
+
+	  No, instead:
+	  When on the right letter, record the x and y positions
+	 */
+
+	/*struct buffer_node *tmp = buffer->head;
+
+	for (tmp; tmp != NULL; tmp = tmp->next)
 	{
-		mvwprintw(buffer->text_win->win, y+1, x+1, "0%d ", line->lineno);
+		if (tmp->length > x_off)
+			x_off = tmp->length;
+	}*/
+
+	//x_off -= (buffer->text_win->w - 6/*check this*/);
+
+	int x_off = buffer->x - (buffer->text_win->w - 6);
+
+	if (x_off < 0)
+		x_off = 0;
+
+	for (line; line != buffer->edit_end->next && y < buffer->edit_end->lineno; line = line->next)
+	{
+		//size_t tab_num = 0;
+		x = 0;
+
+		if (buffer->y == line->lineno - 1)
+			passed_line = true;
+
+		if (line->lineno < 10)		
+			mvwprintw(buffer->text_win->win, y+1, x+1, "0%d ", line->lineno);
+
+		else
+			mvwprintw(buffer->text_win->win, y+1, x+1, "%d ", line->lineno);
 
 		value = line->head;
 
+		if (value != NULL)
+		{	
+			for (size_t i = 0; i < x_off; i++)
+			{
+				value = value->next;
+
+				if (value == NULL)
+					break;
+			}
+		}
+		
 		for (value; value != NULL; value = value->next)
 		{
 			mvwprintw(buffer->text_win->win, y+1, x+4, "%c", value->value);
 			x++;
 		}
-
 		y++;
-		x = 0;
-	}
 
-	move(buffer->y+2, buffer->x+4);
+		/*if (!passed_line)
+		{
+			xPos = x;
+			yPos = y;
+		}*/
+	}
+	move(buffer->yPos + 2, buffer->xPos + 4 - x_off);
 
 	box(buffer->text_win->win, 0, 0);
 	wrefresh(buffer->text_win->win);
@@ -286,6 +357,8 @@ void init_buffer(struct text_buffer *buffer)
 
 	buffer->x = 0;
 	buffer->y = 0;
+	buffer->xPos = 0;
+	buffer->yPos = 0;
 	buffer->text_win = (struct window_data*)malloc(sizeof(struct window_data));
 	buffer->command_win = (struct window_data*)malloc(sizeof(struct window_data));
 	buffer->text_win->x = 0;
@@ -326,4 +399,28 @@ void set_edit_buffer(struct text_buffer *buffer, int line)
 		else
 			buffer->edit_end = buffer->edit_end->next;
 	}
+}
+
+void update_environment(struct text_buffer *buffer)
+{
+	buffer->text_win->w = COLS;
+	buffer->text_win->h = LINES - 3;
+
+	buffer->command_win->y = LINES - 3;
+	buffer->command_win->w = COLS;
+}
+
+int longest_line_length(struct text_buffer buffer)
+{
+	int i = 0;
+
+	struct buffer_node *tmp = buffer.head;
+
+	for (tmp; tmp != NULL; tmp = tmp->next)
+	{
+		if (tmp->length > i)
+			i = tmp->length;
+	}
+
+	return i;
 }

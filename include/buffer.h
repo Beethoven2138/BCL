@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <locale.h>
 
 #include <tui.h>
 
@@ -33,6 +34,7 @@ typedef struct buffer_node
 typedef struct text_buffer
 {
 	int x, y;
+	int xPos, yPos;
 	struct buffer_node *head;
 	struct buffer_node *tail;
         size_t node_count;
@@ -74,6 +76,10 @@ void delete_line(struct text_buffer *buffer, struct buffer_node *prev);
 void init_buffer(struct text_buffer *buffer);
 
 void set_edit_buffer(struct text_buffer *buffer, int line);
+
+int longest_line_length(struct text_buffer buffer);
+
+void update_environment(struct text_buffer *buffer);
 
 #endif
 

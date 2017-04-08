@@ -2,8 +2,9 @@
 #define FILEOPS_H
 
 #include <stdio.h>
-#include <stddef.h>
 #include <buffer.h>
+#include <string.h>
+#include <stdbool.h>
 
 char* create_file_buffer(char *file_name);
 

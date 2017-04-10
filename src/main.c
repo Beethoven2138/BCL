@@ -90,6 +90,18 @@ int main(int argc, char *argv[])
 
 		        exit(0);
 		}
+		
+		else if (ch == KEY_HOME)
+		{
+			buffer.x = 0;
+			buffer.xPos = 0;
+		}
+
+		else if (ch == KEY_END)
+		{
+			buffer.x = current_line->length;
+			buffer.xPos = current_line->length;
+		}
 
 		//Delete key
 		else if (ch == KEY_BACKSPACE || ch == KEY_DL || ch == 127)

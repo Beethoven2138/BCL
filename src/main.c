@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 
 		        exit(0);
 		}
-		
+
 		else if (ch == KEY_HOME)
 		{
 			buffer.x = 0;
@@ -238,6 +238,13 @@ int main(int argc, char *argv[])
 					}
 				}
 
+				else if (current_line->next->length == buffer.x &&
+				    current_line->xPos >= current_line->next->xPos)
+				{
+					buffer.x = current_line->xPos;
+					buffer.xPos = buffer.x;
+				}
+				
 				if (buffer.yPos == 0 && buffer.y > (buffer.text_win->h/2)-1)
 				{
 					set_edit_buffer(&buffer, buffer.y - buffer.text_win->h/2);
@@ -253,6 +260,13 @@ int main(int argc, char *argv[])
 			{
 				buffer.y++;
 				buffer.yPos++;
+
+				if (current_line->xPos == current_line->length &&
+				    current_line->next->xPos >= current_line->xPos)
+				{
+					buffer.x = current_line->next->xPos;
+					buffer.xPos = buffer.x;
+				}
 
 				current_line = current_line->next;
 
@@ -316,6 +330,7 @@ int main(int argc, char *argv[])
 				current_line->head = NULL;
 			}
 
+			new_line->xPos = 0;
 			new_line->lineno = current_line->lineno;
 			current_line->length = buffer.x;
 			current_line = new_line;
@@ -419,6 +434,8 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		current_line->xPos = buffer.x;
+		
 		wclear(buffer.text_win->win);
 		print_buffer(&buffer);
 	}

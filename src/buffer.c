@@ -18,6 +18,7 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 
 	node->length = 0;
 	node->lineno = 1;
+	node->xPos = 0;
 
 	int c;
 
@@ -54,6 +55,7 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 			node->next = NULL;
 			node->head = NULL;
 			node->length = 0;
+			node->xPos = 0;
 
 			buffer->tail = node;
 			buffer->node_count++;

@@ -27,6 +27,7 @@ typedef struct buffer_node
 {
 	size_t length;
         size_t lineno;//TODO: add this in all the functions
+	size_t xPos;
 	struct character *head;
 	struct buffer_node *next;
 } buffer_node;

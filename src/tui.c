@@ -12,6 +12,16 @@ WINDOW *create_new_win(int startx, int starty, int width, int height)
 	return local_win;
 }
 
+WINDOW *simple_create_new_win(int startx, int starty, int width, int height)
+{
+	WINDOW *local_win;
+
+	local_win = newwin(height, width, starty, startx);
+	wrefresh(local_win);
+
+	return local_win;
+}
+
 
 void destroy_win(WINDOW *local_win)
 {	
@@ -33,4 +43,19 @@ void destroy_win(WINDOW *local_win)
 	 */
 	wrefresh(local_win);
 	delwin(local_win);
+}
+
+void init_colors()
+{
+	start_color();
+
+	init_pair(COLOR_DEFAULT, COLOR_WHITE, COLOR_BLACK);
+	init_pair(COLOR_COMMENT, COLOR_BLUE, COLOR_BLACK);
+	init_pair(COLOR_INCLUDE, COLOR_CYAN, COLOR_BLACK);
+	init_pair(COLOR_STDLIB, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(COLOR_TODO, COLOR_WHITE, COLOR_YELLOW);
+	init_pair(COLOR_DATA, COLOR_GREEN, COLOR_BLACK);
+	init_pair(COLOR_CTL, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(COLOR_BOOL, COLOR_RED, COLOR_BLACK);
+	init_pair(COLOR_JUMP, COLOR_MAGENTA, COLOR_BLACK);
 }

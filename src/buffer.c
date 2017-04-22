@@ -1,3 +1,14 @@
+/*  BCL is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    BCL is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with BCL.  If not, see <http://www.gnu.org/licenses/>.*/
+
 #include <buffer.h>
 
 int file_to_buffer(char *file_name, struct text_buffer *buffer)
@@ -30,6 +41,7 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 		{
 		        //if (node->length < buffer->text_win->w - 5)
 				add_char_to_line(node, (char)c, node->length);
+				
 
 				/*else
 			{
@@ -80,11 +92,11 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 		line->head->value = value;
 		goto exit;
 	}
-	
+
 	struct character *letter = line->head;
-	
+
 	struct character *tmp = (character*)malloc(sizeof(character));
-	
+
 	//Start of line
 	if (position == 0)
 	{
@@ -96,15 +108,6 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 
 	for (unsigned int count = 1; count <= position; count++)
 	{
-		//Append at end of the line
-		if (letter->next == NULL)
-		{
-			letter->next = (character*)malloc(sizeof(character));
-			letter->next->value = value;
-			letter->next->next = NULL;
-			goto exit;
-		}
-
 		if (count == position)
 		{
 			tmp->next = letter->next;
@@ -120,16 +123,18 @@ exit:
 	line->length++;
 }
 
-void free_buffer(struct text_buffer *buffer)
+
+
+void free_buffer(struct text_buffer *buffer_to_free)
 {
-	struct buffer_node *node = buffer->head;
+	struct buffer_node *node = buffer_to_free->head;
 
 	if (node != NULL)
 	{
 		struct buffer_node *tmp_node;
 
 		//Free each line
-		for (int j = 0; j < buffer->node_count; j++)
+		for (int j = 0; j < buffer_to_free->node_count; j++)
 		{
 			struct character *letter = node->head;
 
@@ -141,17 +146,32 @@ void free_buffer(struct text_buffer *buffer)
 				letter = letter->next;
 				free(tmp);
 			}
-
 			tmp_node = node;
 			node = node->next;
 			free(tmp_node);
 		}
-		
 	}
 
-	destroy_win(buffer->text_win->win);
-	destroy_win(buffer->command_win->win);
-	//free(buffer);
+	destroy_win(buffer_to_free->text_win->win);
+	destroy_win(buffer_to_free->command_win->win);
+
+	buffer_to_free->file_name = 0;
+	buffer_to_free->file_buffer_name = 0;
+	buffer_to_free->modified = false;
+	buffer_to_free->x = 0;
+	buffer_to_free->y = 0;
+	buffer_to_free->xPos = 0;
+	buffer_to_free->yPos = 0;
+	buffer_to_free->head = NULL;
+	buffer_to_free->tail = NULL;
+	buffer_to_free->node_count = 0;
+	buffer_to_free->current_line = NULL;
+	buffer_to_free->edit_start = NULL;
+	buffer_to_free->edit_end = NULL;
+	buffer_to_free->text_win = NULL;
+	buffer_to_free->command_win = NULL;
+	//buffer_to_free->title_win = NULL;
+	//destroy_win(buffer_to_free->title_win->win);
 }
 
 
@@ -180,7 +200,7 @@ void get_line(struct buffer_node *node, char *contents, size_t length)
 
 	letter = node->head;
 
-	for (int i = 0; i < length; i++)
+	for (int i = 0; i < length && letter != NULL; i++)
 	{
 		contents[i] = letter->value;
 
@@ -189,6 +209,8 @@ void get_line(struct buffer_node *node, char *contents, size_t length)
 
 	contents[length] = 0;
 }
+
+
 
 void delete_character(struct buffer_node *line, unsigned int position)
 {
@@ -219,58 +241,46 @@ void delete_character(struct buffer_node *line, unsigned int position)
 	}
 }
 
+
+
 void print_buffer(struct text_buffer *buffer)
 {
         size_t x = 0;
+	size_t xPos = 0;
 	size_t y = 0;
-//	size_t x_offset = 0;
-	//	size_t y_offset = 0;
-	//bool overflow = false;
-	//size_t tab_num = 0;
+
 	bool passed_line = false;
 
 	struct buffer_node *line = buffer->edit_start;
 
 	struct character *value;
 
-	move(0,0);
-	printw(" Buggy Collection of Linked-lists Version 1.2   AUTHOR: SAXON SUPPLE");
-	refresh();
-	move(0,0);
+	buffer->xPos = buffer->x;
 
+	int i = 0;
+	int j = 0;
 
-	/*
-	  To implement multiple line buffer_nodes:
-	  For knowing where the cursor should be on the y-axis
-	  Until we reach the current line, we're going to add up all the lines that the previous buffer_nodes
-	  occupy by doing length / width;
+	struct character *tmp = buffer->current_line->head;
 
-	  For the x-axis
-	  Do line->length % buffer->text_win->w
-
-	  No, instead:
-	  When on the right letter, record the x and y positions
-	 */
-
-	/*struct buffer_node *tmp = buffer->head;
-
-	for (tmp; tmp != NULL; tmp = tmp->next)
+	for (tmp; tmp != NULL; tmp = tmp->next, j++)
 	{
-		if (tmp->length > x_off)
-			x_off = tmp->length;
-	}*/
-
-	//x_off -= (buffer->text_win->w - 6/*check this*/);
-
-	int x_off = buffer->x - (buffer->text_win->w - 6);
+		if (tmp->value == 9)
+			i += 8;
+		else
+			i++;
+		if (j == buffer->x)
+			break;
+	}
+	
+	int x_off = /*buffer->x*/i - (buffer->text_win->w - 6);
 
 	if (x_off < 0)
 		x_off = 0;
 
 	for (line; line != buffer->edit_end->next && y < buffer->edit_end->lineno; line = line->next)
 	{
-		//size_t tab_num = 0;
 		x = 0;
+		xPos = 0;
 
 		if (buffer->y == line->lineno - 1)
 			passed_line = true;
@@ -284,7 +294,7 @@ void print_buffer(struct text_buffer *buffer)
 		value = line->head;
 
 		if (value != NULL)
-		{	
+		{
 			for (size_t i = 0; i < x_off; i++)
 			{
 				value = value->next;
@@ -296,21 +306,50 @@ void print_buffer(struct text_buffer *buffer)
 		
 		for (value; value != NULL; value = value->next)
 		{
-			mvwprintw(buffer->text_win->win, y+1, x+4, "%c", value->value);
-			x++;
+			if (value->value == 9)
+			{
+				for (int i = 0; i < 7; i++)
+					mvwprintw(buffer->text_win->win, y+1, x+4, " ");
+				x += 8;
+
+				if (line == buffer->current_line && xPos < buffer->xPos)
+				{
+					buffer->xPos += 7;
+				}
+			}
+
+			else
+			{
+				mvwprintw(buffer->text_win->win, y+1, x+4, "%c", value->value);
+				x++;
+				xPos++;
+			}
 		}
 		y++;
-
-		/*if (!passed_line)
-		{
-			xPos = x;
-			yPos = y;
-		}*/
 	}
 	move(buffer->yPos + 2, buffer->xPos + 4 - x_off);
 
 	box(buffer->text_win->win, 0, 0);
+	box(buffer->command_win->win, 0, 0);
+	mvwprintw(buffer->command_win->win, 1, 1, "F2=quit and save to backup, F3=quit, F4=GOTO, F5=Save, F6=Shell Command, F7=R/W file");
+	//mvwprintw(buffer->text_win->win, 0, 0, "Buggy collection of linked lists Version 1.2   AUTHOR: SAXON SUPPLE");
 	wrefresh(buffer->text_win->win);
+	wrefresh(buffer->command_win->win);
+	//wrefresh(buffer->title_win->win);
+}
+
+void print_line(struct text_buffer *buffer, struct buffer_node *line)
+{
+	for (int x = 1; x < buffer->text_win->w; x++)
+		mvwprintw(buffer->text_win->win, buffer->yPos + 1, 4, " ");
+
+	char tmp[line->length + 1];
+
+	get_line(line, tmp, line->length);
+	
+	mvwprintw(buffer->text_win->win, buffer->yPos + 1, 4, tmp);
+	wrefresh(buffer->text_win->win);
+        move(buffer->yPos + 2, buffer->xPos + 4);
 }
 
 void get_line_node(struct text_buffer *buffer, struct buffer_node **line, int num)
@@ -356,13 +395,18 @@ void delete_line(struct text_buffer *buffer, struct buffer_node *prev)
 void init_buffer(struct text_buffer *buffer)
 {
 	setlocale(LC_ALL, "en_GB.UTF-8");
+	start_color();
 
+	init_pair(1,COLOR_BLACK, COLOR_WHITE);
+	
 	buffer->x = 0;
 	buffer->y = 0;
 	buffer->xPos = 0;
 	buffer->yPos = 0;
+	buffer->modified = false;
 	buffer->text_win = (struct window_data*)malloc(sizeof(struct window_data));
 	buffer->command_win = (struct window_data*)malloc(sizeof(struct window_data));
+	//buffer->title_win = (struct window_data*)malloc(sizeof(struct window_data));
 	buffer->text_win->x = 0;
 	buffer->text_win->y = 1;
 	buffer->text_win->w = COLS;
@@ -373,14 +417,29 @@ void init_buffer(struct text_buffer *buffer)
 	buffer->command_win->w = COLS;
 	buffer->command_win->h = 3;
 
+	/*buffer->title_win->x = 0;
+	buffer->title_win->y = 0;
+	buffer->title_win->h = 1;
+	buffer->title_win->w = COLS;*/
+
 	buffer->text_win->win = create_new_win(buffer->text_win->x, buffer->text_win->y, buffer->text_win->w,
 					       buffer->text_win->h);
 
 	buffer->command_win->win = create_new_win(buffer->command_win->x, buffer->command_win->y,
 						  buffer->command_win->w, buffer->command_win->h);
-	
-	mvwprintw(buffer->command_win->win, 1, 1, "S=save, F2=quit");
+	/*buffer->title_win->win = simple_create_new_win(buffer->text_win->x, buffer->text_win->y,
+	  buffer->text_win->w, buffer->text_win->h);*/
+
+//mvwprintw(buffer->text_win->win, 0, 0, "Buggy collection of linked lists Version 1.2   AUTHOR: SAXON SUPPLE");
+	mvwprintw(buffer->command_win->win, 1, 1, "F2=quit and save to backup, F3=quit, F4=GOTO, F5=Save, F6=Shell Command, F7=R/W file");
 	wrefresh(buffer->command_win->win);
+	wrefresh(buffer->text_win->win);
+	attron(COLOR_PAIR(1));
+	for (int i = 0; i < COLS; i++)
+		mvprintw(0, i, " ");
+	mvprintw(0, 0, " Buggy Collection of Linked-lists Version 1.2   AUTHOR: SAXON SUPPLE");
+	attroff(COLOR_PAIR(1));
+	refresh();
 }
 
 void set_edit_buffer(struct text_buffer *buffer, int line)
@@ -410,19 +469,43 @@ void update_environment(struct text_buffer *buffer)
 
 	buffer->command_win->y = LINES - 3;
 	buffer->command_win->w = COLS;
+
+	buffer->command_win->x = 0;
+	buffer->command_win->y = LINES - 3;
+	buffer->command_win->w = COLS;
+	buffer->command_win->h = 3;
 }
 
-int longest_line_length(struct text_buffer buffer)
+static int longest_line_length(struct text_buffer buffer)
 {
 	int i = 0;
 
 	struct buffer_node *tmp = buffer.head;
+	struct character *value;
 
 	for (tmp; tmp != NULL; tmp = tmp->next)
 	{
-		if (tmp->length > i)
-			i = tmp->length;
+		int x = 0;
+		for (value = tmp->head; value != NULL; value = value->next)
+		{
+			if (value->value == 9)
+				x += 8;
+			else
+				x++;
+		}
+
+		if (x > i)
+			i = x;
 	}
 
 	return i;
 }
+
+
+/*TODO:
+  Fix read_state
+  Improve print_line
+  Add multiple buffers
+  Add undo and redo
+  Add syntax highlighting
+ */

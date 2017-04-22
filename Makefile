@@ -4,6 +4,7 @@ OBJECTS=obj/main.o \
 	obj/fileops.o \
 	obj/buffer.o \
 	obj/tui.o \
+	obj/command.o \
 
 
 obj/%.o: src/%.c

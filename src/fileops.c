@@ -1,6 +1,5 @@
 #include <fileops.h> 
 
-
 char* create_file_buffer(char *file_name)
 {
 	FILE *fp = fopen(file_name, "r");
@@ -68,7 +67,7 @@ int buffer_to_file(char *file_name, struct text_buffer *buffer)
 			free(line);
 		}
 
-		else
+		else if (node->next != NULL)
 			fputc(10, fp);
 	}
 

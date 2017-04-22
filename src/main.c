@@ -11,8 +11,6 @@
 
 //AUTHOR: SAXON SUPPLE
 
-//TODO: make everything relative to edit_start
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -23,22 +21,23 @@
 #include <fileops.h>
 #include <buffer.h>
 #include <tui.h>
+#include <command.h>
 
-//valgrind --leak-check=full ./text_editor
+//valgrind --leak-check=full ./bcl
+
+//TODO: Get rid of the retarded xPos and yPos in text_buffer as not needed for finding cursor pos
 
 struct text_buffer buffer;
 
 int main(int argc, char *argv[])
 {
-	char *file_buffer_name;
-	char *file_name;
 
-	//If the user entered he address of the file that he wants to open
+	//If the user entered the address of the file that he wants to open
 	if (argc == 2)
 	{
-	        file_name = argv[1];
-		file_buffer_name = create_file_buffer(/*argv[1]*/file_name);
-		if (file_buffer_name == 0)
+	        buffer.file_name = argv[1];
+		buffer.file_buffer_name = create_file_buffer(/*argv[1]*/buffer.file_name);
+		if (buffer.file_buffer_name == 0)
 		        exit(1);
 		//file_name = argv[1];
 	}
@@ -46,7 +45,7 @@ int main(int argc, char *argv[])
 	else
 	        exit(1);
 
-	if (file_buffer_name == NULL)
+	if (buffer.file_buffer_name == NULL)
 	        exit(1);
 
 	initscr();
@@ -57,7 +56,7 @@ int main(int argc, char *argv[])
 
 	init_buffer(&buffer);
 
-	if (file_to_buffer(file_name, &buffer) == 0)
+	if (file_to_buffer(buffer.file_name, &buffer) == 0)
 	        exit(1);
 
 	set_edit_buffer(&buffer, 0);
@@ -69,10 +68,12 @@ int main(int argc, char *argv[])
 	//pthread_t auto_save_thread;
 	//pthread_create(&auto_save_thread, 0, auto_save, (void*) &file_buffer_name);
 
+	//Used to know which line to add a char to
+        buffer.current_line = buffer.head;
+	
 	print_buffer(&buffer);
 
-	//Used to know which line to add a char to
-	struct buffer_node *current_line = buffer.head;
+	size_t chars_entered = 0;
 
 	while (1)
 	{
@@ -82,13 +83,50 @@ int main(int argc, char *argv[])
 		//Quit
 		if (ch == KEY_F(2))
 		{
-			buffer_to_file(file_buffer_name, &buffer);
+			buffer_to_file(buffer.file_buffer_name, &buffer);
 
 			free_buffer(&buffer);
 
 			endwin();
 
 		        exit(0);
+		}
+
+		//Save file
+		else if (ch == KEY_F(5))
+		{
+			//pthread_join(auto_save_thread, 0);
+			buffer_to_file(buffer.file_name, &buffer);
+			buffer.modified = false;
+		}
+
+		else if (ch == KEY_F(3))
+		{
+			command_state = (void*)quit_state;
+			if (quit_state(buffer.modified, &buffer))
+			{
+				free_buffer(&buffer);
+				endwin();
+				break;
+			}
+		}
+
+		else if (ch == KEY_F(4))
+		{
+			command_state = goto_line;
+			command_state(&buffer);
+		}
+
+		else if (ch == KEY_F(6))
+		{
+			command_state = (void*)shell_state;
+		        command_state(&buffer);
+		}
+
+		else if (ch == KEY_F(7))
+		{
+			command_state = (void*)read_state;
+			command_state(&buffer);
 		}
 
 		else if (ch == KEY_HOME)
@@ -99,53 +137,53 @@ int main(int argc, char *argv[])
 
 		else if (ch == KEY_END)
 		{
-			buffer.x = current_line->length;
-			buffer.xPos = current_line->length;
+			buffer.x = buffer.current_line->length;
+			buffer.xPos = buffer.current_line->length;
 		}
 
 		//Delete key
-		else if (ch == KEY_BACKSPACE || ch == KEY_DL || ch == 127)
+		else if (ch == KEY_BACKSPACE || ch == KEY_DL || ch == 127 || ch == 8)
 		{
+			buffer.modified = true;
 			if (buffer.x > 0)
 			{
 				buffer.x--;
 				buffer.xPos--;
-				delete_character(current_line, buffer.x);
+				delete_character(buffer.current_line, buffer.x);
 				/*if (buffer.x == 0)
 				{
 					current_line->head = NULL;
 					current_line->length = 0;
 				}*/
 			}
-			
+
 			else if (buffer.y > 0)
 			{
 				buffer.y--;
 				buffer.yPos--;
-				get_prev_line(buffer, &current_line);
-				buffer.x = current_line->length;
-				buffer.xPos = current_line->length;
+				get_prev_line(buffer, &(buffer.current_line));
+				buffer.x = buffer.current_line->length;
+				buffer.xPos = buffer.current_line->length;
 
-				if (current_line->length == 0)
+				if (buffer.current_line->length == 0)
 				{
-					current_line->head = current_line->next->head;
+					buffer.current_line->head = buffer.current_line->next->head;
 				}
 
-				else if (current_line->next->head != NULL)
+				else if (buffer.current_line->next->head != NULL)
 				{
 					struct character *tmp;
-					tmp = get_letter(current_line, current_line->length-1);
-					tmp->next = current_line->next->head;
+					tmp = get_letter(buffer.current_line, buffer.current_line->length-1);
+					tmp->next = buffer.current_line->next->head;
 				}
 
-				current_line->length += current_line->next->length;
+				buffer.current_line->length += buffer.current_line->next->length;
 
-				if (current_line->next->next != NULL)
+				if (buffer.current_line->next->next != NULL)
 				{
-				
-					delete_line(&buffer, current_line);
+					delete_line(&buffer, buffer.current_line);
 
-					struct buffer_node* tmp_line = current_line->next;
+					struct buffer_node* tmp_line = buffer.current_line->next;
 
 					for (tmp_line; tmp_line != 0; tmp_line = tmp_line->next)
 						tmp_line->lineno--;
@@ -153,11 +191,10 @@ int main(int argc, char *argv[])
 
 				else
 				{
-					free(current_line->next);
-					current_line->next = NULL;
-					buffer.tail = NULL;
+					free(buffer.current_line->next);
+					buffer.current_line->next = NULL;
+					buffer.tail = buffer.current_line;
 					buffer.node_count--;
-				        
 				}
 
 				if (buffer.yPos == 0 && buffer.y > (buffer.text_win->h/2)-1)
@@ -168,7 +205,7 @@ int main(int argc, char *argv[])
 			}
 
 			set_edit_buffer(&buffer, buffer.edit_start->lineno-1);
-		}//Only issues when last line
+		}
 
 		//Forward arrow
 		else if (ch == KEY_RIGHT)
@@ -176,19 +213,19 @@ int main(int argc, char *argv[])
 			buffer.x++;
 			buffer.xPos++;
 
-			if (buffer.x > current_line->length && current_line->next != 0)
+			if (buffer.x > buffer.current_line->length && buffer.current_line->next != 0)
 			{
-				current_line = current_line->next;
+				buffer.current_line = buffer.current_line->next;
 				buffer.x = 0;
 				buffer.xPos = 0;
 				buffer.y++;
 				buffer.yPos++;
 			}
 
-			else if (buffer.x > current_line->length)
+			else if (buffer.x > buffer.current_line->length)
 			{
-				buffer.x = current_line->length;
-				buffer.xPos = current_line->length;
+				buffer.x = buffer.current_line->length;
+				buffer.xPos = buffer.current_line->length;
 			}
 		}
 
@@ -197,13 +234,13 @@ int main(int argc, char *argv[])
 		{
 			buffer.x--;
 			buffer.xPos--;
-			
+
 			if (buffer.x < 0 && buffer.y > 0)
 			{
 				//TODO Get hold of the previous line
-				get_prev_line(buffer, &current_line);
-			        buffer.x = current_line->length;
-				buffer.xPos = current_line->length;
+				get_prev_line(buffer, &(buffer.current_line));
+			        buffer.x = buffer.current_line->length;
+				buffer.xPos = buffer.current_line->length;
 			        buffer.y--;
 				buffer.yPos--;
 			}
@@ -222,13 +259,13 @@ int main(int argc, char *argv[])
 			{
 				buffer.y--;
 				buffer.yPos--;
-				get_prev_line(buffer, &current_line);
-				if (buffer.x > current_line->length)
+				get_prev_line(buffer, &(buffer.current_line));
+				if (buffer.x > buffer.current_line->length)
 				{
-					if (current_line->length != 0)
+					if (buffer.current_line->length != 0)
 					{
-						buffer.x = current_line->length;
-						buffer.xPos = current_line->length;
+						buffer.x = buffer.current_line->length;
+						buffer.xPos = buffer.current_line->length;
 					}
 
 					else
@@ -238,13 +275,13 @@ int main(int argc, char *argv[])
 					}
 				}
 
-				else if (current_line->next->length == buffer.x &&
-				    current_line->xPos >= current_line->next->xPos)
+				else if (buffer.current_line->next->length == buffer.x &&
+				    buffer.current_line->xPos >= buffer.current_line->next->xPos)
 				{
-					buffer.x = current_line->xPos;
+					buffer.x = buffer.current_line->xPos;
 					buffer.xPos = buffer.x;
 				}
-				
+
 				if (buffer.yPos == 0 && buffer.y > (buffer.text_win->h/2)-1)
 				{
 					set_edit_buffer(&buffer, buffer.y - buffer.text_win->h/2);
@@ -256,38 +293,34 @@ int main(int argc, char *argv[])
 		//Down arrow
 		else if (ch == KEY_DOWN)
 		{
-			if (current_line->next != 0)
+			if (buffer.current_line->next != 0)
 			{
 				buffer.y++;
 				buffer.yPos++;
 
-				if (current_line->xPos == current_line->length &&
-				    current_line->next->xPos >= current_line->xPos)
+				if (buffer.current_line->xPos == buffer.current_line->length &&
+				    buffer.current_line->next->xPos >= buffer.current_line->xPos)
 				{
-					buffer.x = current_line->next->xPos;
+					buffer.x = buffer.current_line->next->xPos;
 					buffer.xPos = buffer.x;
 				}
 
-				current_line = current_line->next;
+				buffer.current_line = buffer.current_line->next;
 
-				if (buffer.y < buffer.node_count)
+				/*if (buffer.y < buffer.node_count)
 				{
 					set_edit_buffer(&buffer, buffer.edit_start->lineno-1);
-				}
+					}*/
 
-				if (buffer.x > current_line->length)
+				if (buffer.x > buffer.current_line->length)
 				{
-					if (current_line->length == 1)
-					{
+					if (buffer.current_line->length == 1)
 						buffer.x = 0;
-						buffer.xPos = 0;
-					}
 
 					else
-					{
-						buffer.x = current_line->length;
-						buffer.xPos = current_line->length;
-					}
+						buffer.x = buffer.current_line->length;
+
+					buffer.xPos = buffer.x;
 				}
 
 				if (buffer.yPos + 2 == buffer.text_win->h)
@@ -301,23 +334,24 @@ int main(int argc, char *argv[])
 		//Enter key
 		else if (ch == 10 || ch == KEY_ENTER)
 		{
+			buffer.modified = true;
 			struct buffer_node *new_line = (buffer_node*)malloc(sizeof(buffer_node));
-			
+
 			//Create new line
-			new_line->next = current_line->next;
-			current_line->next = new_line;
+			new_line->next = buffer.current_line->next;
+			buffer.current_line->next = new_line;
 
 			if (buffer.x != 0)
 			{
 				struct character *tmp_ch;
-				tmp_ch = get_letter(current_line, buffer.x-1);
+				tmp_ch = get_letter(buffer.current_line, buffer.x-1);
 
 				struct character *tmp_next = tmp_ch->next;
 
 				tmp_ch->next = NULL;
-				
+
 				//Set Lengths of the lines
-				new_line->length = current_line->length - buffer.x;
+				new_line->length = buffer.current_line->length - buffer.x;
 
 				//Set the head for the new line
 				new_line->head = tmp_next;
@@ -325,24 +359,29 @@ int main(int argc, char *argv[])
 
 			else
 			{
-				new_line->head = current_line->head;
-				new_line->length = current_line->length;
-				current_line->head = NULL;
+				new_line->head = buffer.current_line->head;
+				new_line->length = buffer.current_line->length;
+				buffer.current_line->head = NULL;
 			}
 
 			new_line->xPos = 0;
-			new_line->lineno = current_line->lineno;
-			current_line->length = buffer.x;
-			current_line = new_line;
+			new_line->lineno = buffer.current_line->lineno;
+			buffer.current_line->length = buffer.x;
+			buffer.current_line = new_line;
 
-			struct buffer_node *tmp = current_line;
+			struct buffer_node *tmp = buffer.current_line;
 
 			size_t i = tmp->lineno;
 
+			buffer.tail = tmp;
+			
 			for (tmp; tmp != NULL; tmp = tmp->next)
 			{
 				i++;
 				tmp->lineno = i;
+
+				if (tmp->next == NULL)
+					buffer.tail = tmp;
 			}
 
 			buffer.node_count++;
@@ -369,16 +408,6 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		//Save file
-		else if ((ch == 's' || ch == 'S') && insert_mode)
-		{
-			//pthread_join(auto_save_thread, 0);
-			buffer_to_file(file_name, &buffer);
-			free_buffer(&buffer);
-			endwin();
-			break;
-		}
-
 		//Escape key
 		else if (ch == 0x1B)
 		{
@@ -387,6 +416,8 @@ int main(int argc, char *argv[])
 
 		else if (!insert_mode)
 		{
+
+			buffer.modified = true;
 			/*if (buffer.x >= buffer.text_win->w - 6)//Check this
 			{
 				current_line->add_new_line = false;
@@ -415,28 +446,36 @@ int main(int argc, char *argv[])
 			}*/
 
 		        //else
-				add_char_to_line(current_line, ch, buffer.x);
+
+				add_char_to_line(buffer.current_line, ch, buffer.x);
 
 		        buffer.x++;
 			buffer.xPos++;
 
-			if (buffer.x >= current_line->length - 1 && current_line->next == NULL)
+			if (buffer.x >= buffer.current_line->length - 1 && buffer.current_line->next == NULL)
 			{
-				current_line->next = malloc(sizeof(buffer_node));
-				current_line->next->next = NULL;
-				current_line->next->length = 0;
-				current_line->next->lineno = current_line->lineno + 1;
-				current_line->next->head = NULL;
-				buffer.tail = NULL;
+				buffer.current_line->next = malloc(sizeof(buffer_node));
+				buffer.current_line->next->next = NULL;
+				buffer.current_line->next->length = 0;
+				buffer.current_line->next->lineno = buffer.current_line->lineno + 1;
+				buffer.current_line->next->head = NULL;
+				buffer.tail = buffer.current_line->next;
 				buffer.node_count++;
 
 				set_edit_buffer(&buffer, buffer.edit_start->lineno - 1);
 			}
+
+			if (++chars_entered >= 10)
+			{
+				chars_entered = 0;
+				buffer_to_file(buffer.file_buffer_name, &buffer);
+			}
 		}
 
-		current_line->xPos = buffer.x;
-		
+		buffer.current_line->xPos = buffer.x;
+
 		wclear(buffer.text_win->win);
+		//print_line(&buffer, buffer.current_line);Requires more work
 		print_buffer(&buffer);
 	}
 

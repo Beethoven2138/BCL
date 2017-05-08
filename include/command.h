@@ -9,8 +9,6 @@
 #include <ncurses.h>
 #include <string.h>
 
-void (*command_state)();
-
 int quit_state(bool modified, struct text_buffer *buffer);
 void default_state();
 void goto_line(struct text_buffer *buffer);

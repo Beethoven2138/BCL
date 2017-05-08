@@ -501,7 +501,6 @@ static int longest_line_length(struct text_buffer buffer)
 	return i;
 }
 
-
 /*TODO:
   Fix read_state
   Improve print_line

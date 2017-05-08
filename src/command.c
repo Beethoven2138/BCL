@@ -130,6 +130,29 @@ void read_state(struct text_buffer *buffer)
 		if ((input[0] == 'q' || input[0] == 'Q') && strlen(input) == 1)
 			goto exit;
 
+		if (strcmp(input, "new") == 0)//create a new buffer
+		{
+			buffer->next = (text_buffer*)malloc(sizeof(text_buffer));
+			buffer->next->prev = buffer;
+			buffer = buffer->next;
+
+			init_buffer(buffer);
+			while(1)
+			{
+				werase(buffer->command_win->win);
+				box(buffer->command_win->win, 0, 0);
+				wmove(buffer->command_win->win, 1, 1);
+				wprintw(buffer->command_win->win, "File to insert: ");
+				wrefresh(buffer->command_win->win);
+				wgetstr(buffer->command_win->win, input);
+				
+				if ((input[0] == 'q' || input[0] == 'Q') && strlen(input) == 1)
+					goto exit;
+
+				if (create_file_buffer(input
+			}
+		}
+
 		char *tmp = create_file_buffer(input);
 		if (tmp == 0)
 			continue;

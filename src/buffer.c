@@ -72,11 +72,9 @@ int file_to_buffer(char *file_name, struct text_buffer *buffer)
 			buffer->tail = node;
 			buffer->node_count++;
 		}
-
 		else
 			goto exit;
 	}
-
 exit:
 	fclose(fp);
 	node->next = NULL;
@@ -94,7 +92,6 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 	}
 
 	struct character *letter = line->head;
-
 	struct character *tmp = (character*)malloc(sizeof(character));
 
 	//Start of line
@@ -115,10 +112,8 @@ void add_char_to_line(struct buffer_node *line, char value, int position)
 			tmp->value = value;
 			goto exit;
 		}
-
 		letter = letter->next;
 	}
-
 exit:
 	line->length++;
 }
@@ -184,13 +179,10 @@ struct character* get_letter(struct buffer_node *node, size_t position)
 	for (letter; letter != NULL; letter = letter->next)
 	{
 		if (count == position)
-		{
 			return letter;
-		}
 
 		count++;
 	}
-
 	return 0;
 }
 
@@ -206,7 +198,6 @@ void get_line(struct buffer_node *node, char *contents, size_t length)
 
 		letter = letter->next;
 	}
-
 	contents[length] = 0;
 }
 
@@ -236,7 +227,6 @@ void delete_character(struct buffer_node *line, unsigned int position)
 			line->length--;
 			return;
 		}
-
 		count++;
 	}
 }
@@ -271,7 +261,7 @@ void print_buffer(struct text_buffer *buffer)
 		if (j == buffer->x)
 			break;
 	}
-	
+
 	int x_off = /*buffer->x*/i - (buffer->text_win->w - 6);
 
 	if (x_off < 0)
@@ -303,7 +293,7 @@ void print_buffer(struct text_buffer *buffer)
 					break;
 			}
 		}
-		
+
 		for (value; value != NULL; value = value->next)
 		{
 			if (value->value == 9)
@@ -313,9 +303,7 @@ void print_buffer(struct text_buffer *buffer)
 				x += 8;
 
 				if (line == buffer->current_line && xPos < buffer->xPos)
-				{
 					buffer->xPos += 7;
-				}
 			}
 
 			else
@@ -357,9 +345,7 @@ void get_line_node(struct text_buffer *buffer, struct buffer_node **line, int nu
 	*line = buffer->head;
 
 	for (num; num > 0 && (*line)->next != NULL; num--)
-	{
 		*line = (*line)->next;
-	}
 }
 
 void get_prev_line(struct text_buffer buffer, struct buffer_node **line)
@@ -497,7 +483,6 @@ static int longest_line_length(struct text_buffer buffer)
 		if (x > i)
 			i = x;
 	}
-
 	return i;
 }
 

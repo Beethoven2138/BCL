@@ -112,22 +112,13 @@ int main(int argc, char *argv[])
 		}
 
 		else if (ch == KEY_F(4))
-		{
-			command_state = goto_line;
-			command_state(&buffer);
-		}
+			goto_line(&buffer);
 
 		else if (ch == KEY_F(6))
-		{
-			command_state = (void*)shell_state;
-		        command_state(&buffer);
-		}
+			shell_state(&buffer);
 
 		else if (ch == KEY_F(7))
-		{
-			command_state = (void*)read_state;
-			command_state(&buffer);
-		}
+			read_state(&buffer);
 
 		else if (ch == KEY_HOME)
 		{

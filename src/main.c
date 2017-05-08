@@ -39,7 +39,6 @@ int main(int argc, char *argv[])
 		buffer.file_buffer_name = create_file_buffer(/*argv[1]*/buffer.file_name);
 		if (buffer.file_buffer_name == 0)
 		        exit(1);
-		//file_name = argv[1];
 	}
 
 	else
@@ -67,10 +66,8 @@ int main(int argc, char *argv[])
 
 	//pthread_t auto_save_thread;
 	//pthread_create(&auto_save_thread, 0, auto_save, (void*) &file_buffer_name);
-
-	//Used to know which line to add a char to
         buffer.current_line = buffer.head;
-	
+
 	print_buffer(&buffer);
 
 	size_t chars_entered = 0;

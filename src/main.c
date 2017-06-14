@@ -99,7 +99,6 @@ int main(int argc, char *argv[])
 
 		else if (ch == KEY_F(3))
 		{
-			command_state = (void*)quit_state;
 			if (quit_state(buffer.modified, &buffer))
 			{
 				free_buffer(&buffer);

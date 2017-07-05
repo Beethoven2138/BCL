@@ -101,6 +101,9 @@ int main(int argc, char *argv[])
 		{
 			if (quit_state(buffer.modified, &buffer))
 			{
+				char str[100];
+				sprintf(str, "rm %s", buffer.file_buffer_name);
+				system(str);
 				free_buffer(&buffer);
 				endwin();
 				break;

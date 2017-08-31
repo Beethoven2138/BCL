@@ -17,6 +17,7 @@
 #include <stddef.h>
 #include <ncurses.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <fileops.h>
 #include <buffer.h>
@@ -29,8 +30,11 @@
 
 struct text_buffer buffer;
 
+void sigint_handler(void);
+
 int main(int argc, char *argv[])
 {
+	signal(SIGINT, sigint_handler);
 
 	//If the user entered the address of the file that he wants to open
 	if (argc == 2)
@@ -470,4 +474,16 @@ int main(int argc, char *argv[])
 	}
 
         return 0;
+}
+
+
+void sigint_handler()
+{
+	command_state = (void*)quit_state;
+	if (quit_state(buffer.modified, &buffer))
+	{
+		free_buffer(&buffer);
+		endwin();
+		exit(0);
+	}
 }
